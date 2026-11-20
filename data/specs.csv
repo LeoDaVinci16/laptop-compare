@@ -1,0 +1,19 @@
+spec,compare,rank_file,notes
+Price (€),lower,,
+CPU,ranked,cpu.csv,Score = Cinebench 2024 multi-core
+RAM (GB),higher,,
+RAM upgradeable,ranked,ram_upgradeable.csv,
+SSD (GB),higher,,
+Battery (Wh),higher,,
+Weight (kg),lower,,
+Screen (in),info,,Personal preference (14 vs 16 with numpad)
+Numpad,ranked,numpad.csv,Swap the ranks in numpad.csv if you prefer no numpad
+Panel,ranked,panel.csv,
+Resolution,ranked,resolution.csv,
+Refresh (Hz),higher,,
+Brightness (nits),higher,,
+USB-C ports,higher,,
+USB-A ports,higher,,
+Thunderbolt or USB4,ranked,thunderbolt_or_usb4.csv,
+Price seen at,info,,
+Notes,info,,

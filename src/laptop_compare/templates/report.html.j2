@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laptop comparison</title>
+<style>
+  :root { --base:#E07B39; --other:#4C72B0; --better:#E2EFDA; --better-t:#2E6B2E; --worse:#FADBD8; --worse-t:#9C0006;
+          --miss:#FCE4D6; --miss-t:#9C5700; --line:#e3e6eb; --muted:#6b7280; --good:#2E8B57; --bad:#C0392B; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; color:#1f2937; background:#fafbfc; }
+  header { background:#1f2937; color:#fff; padding: 20px 32px; }
+  header h1 { margin:0 0 4px; font-size: 22px; }
+  header p { margin:0; color:#cbd5e1; font-size: 13px; }
+  .bar { position: sticky; top:0; background:#fff; border-bottom:1px solid var(--line); padding: 10px 32px; z-index:10;
+         display:flex; gap: 24px; align-items:center; flex-wrap: wrap; font-size:13px; }
+  .bar label { font-weight: 600; }
+  .bar select { font-size: 14px; padding: 5px 8px; border: 2px solid var(--base); border-radius: 6px; background:#FFF8F1; font-weight:600; }
+  .bar nav a { margin-right: 14px; color:#374151; text-decoration:none; }
+  .bar nav a:hover { text-decoration: underline; }
+  main { padding: 8px 32px 48px; max-width: 1500px; }
+  h2 { margin-top: 36px; border-bottom: 2px solid var(--line); padding-bottom: 6px; }
+  h3 { margin: 24px 0 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .scroll { overflow-x: auto; border:1px solid var(--line); border-radius: 8px; background:#fff; }
+  table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  th, td { padding: 6px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { background:#eef2f7; text-align: center; white-space: normal; min-width: 64px; }
+  td:first-child, th:first-child { text-align: left; position: sticky; left: 0; background: #fff; font-weight: 600; z-index:1; }
+  th:first-child { background:#eef2f7; z-index:2; }
+  tr.base td { background: #FFF2CC !important; }
+  td.better { background: var(--better); color: var(--better-t); }
+  td.worse  { background: var(--worse);  color: var(--worse-t); }
+  td.missing{ background: var(--miss);   color: var(--miss-t); font-weight:600; }
+  td.text { text-align:left; }
+  td.heat { text-align:center; color:#111; }
+  .alerts { border-radius: 8px; padding: 12px 16px; margin: 18px 0; }
+  .alerts.ok { background: var(--better); color: var(--better-t); }
+  .alerts.bad { background: var(--miss); color: var(--miss-t); }
+  .alerts li { margin: 6px 0; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(620px, 1fr)); gap: 18px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .card h4 { margin: 0 0 4px; font-size: 14px; }
+  .laptop { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 18px 0; }
+  .laptop.isbase { border-color: var(--base); border-width: 2px; }
+  .laptop .cols { display:grid; grid-template-columns: minmax(380px, 1.3fr) minmax(320px, 1fr); gap: 24px; align-items:start; }
+  dl { display:grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 12.5px; margin: 6px 0 12px; }
+  dt { color: var(--muted); }
+  .adv { display:grid; grid-template-columns: 150px 1fr; gap: 4px 10px; font-size: 12px; align-items:center; }
+  .adv .track { position: relative; height: 18px; background: linear-gradient(to right, transparent calc(50% - .5px), #999 calc(50% - .5px), #999 calc(50% + .5px), transparent calc(50% + .5px)); }
+  .adv .fill { position:absolute; top:3px; height:12px; border-radius: 2px; }
+  .adv .lbl { position:absolute; top:1px; font-size: 11px; white-space: nowrap; }
+  .legend span { display:inline-block; padding: 2px 8px; border-radius: 4px; margin-right: 6px; font-size: 12px; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  @media (max-width: 900px) { .laptop .cols { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Laptop comparison</h1>
+  <p>{{ n_laptops }} laptops · {{ n_specs }} specs · generated {{ generated }} · data: {{ data_dir }}</p>
+</header>
+<div class="bar">
+  <div><label for="base">Base laptop:</label>
+    <select id="base">{% for n in laptops %}<option{% if n == base %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  </div>
+  <nav><a href="#summary">Summary</a><a href="#comparison">Comparison</a><a href="#values">Values</a>
+    <a href="#overview">Overview</a><a href="#specs">Per spec</a><a href="#laptops">Per laptop</a></nav>
+</div>
+<main>
+
+<h2 id="summary">Summary</h2>
+{% if issues %}
+<div class="alerts bad"><strong>⚠ {{ issues|length }} thing(s) to fix in the data</strong> (affected cells are orange):
+  <ul>{% for i in issues %}<li>{{ i.message }}<br><span class="muted">→ {{ i.fix }}</span></li>{% endfor %}</ul>
+</div>
+{% else %}
+<div class="alerts ok">✅ Every spec has a type and every ranked value has a rank.</div>
+{% endif %}
+<h3>Best laptop for each spec</h3>
+<div class="scroll"><table>
+  <tr><th>Spec</th><th>Best</th><th>Value</th></tr>
+  {% for r in best %}<tr><td>{{ r.Spec }}</td><td class="text">{{ r.Best }}</td><td>{{ r.Value }}</td></tr>{% endfor %}
+</table></div>
+
+<h2 id="comparison">Comparison vs <span class="basename"></span></h2>
+<p class="legend muted">
+  <span style="background:var(--better);color:var(--better-t)">better than base</span>
+  <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>
+  <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>
+  % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.
+</p>
+<div class="scroll"><table id="comp"></table></div>
+
+<h2 id="values">Spec values</h2>
+<div class="scroll"><table id="values-table">
+  <tr><th>Laptop</th>{% for s in value_specs %}<th>{{ s }}</th>{% endfor %}</tr>
+  {% for row in value_rows %}
+  <tr data-laptop="{{ row.name }}"><td>{{ row.name }}</td>
+    {% for c in row.cells %}<td class="{{ c.cls }}">{{ c.text }}</td>{% endfor %}</tr>
+  {% endfor %}
+</table></div>
+
+<h2 id="overview">Overview</h2>
+<p class="muted">Each spec scored 0–100 within this list (100 = best laptop for that spec, 0 = worst). Grey = no data.
+  This doesn't depend on the base.</p>
+<div class="scroll"><table id="heat">
+  <tr><th>Laptop</th>{% for s in heat.specs %}<th>{{ s }}</th>{% endfor %}</tr>
+  {% for row in heat.rows %}
+  <tr data-laptop="{{ row.name }}"><td>{{ row.name }}</td>
+    {% for c in row.cells %}<td class="heat" style="background:{{ c.bg }}">{{ c.text }}</td>{% endfor %}</tr>
+  {% endfor %}
+</table></div>
+
+<h2 id="specs">Per spec</h2>
+<p class="muted">Every laptop sorted from low to high: price from cheap to expensive, CPU from low tier to high, and so on.
+  The base is orange. Hover over a point or bar to see its value.</p>
+<div class="grid" id="spec-charts"></div>
+
+<h2 id="laptops">Per laptop</h2>
+<p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the laptop (blue) against the base (orange).</p>
+<div id="laptop-cards"></div>
+
+</main>
+
+<script>
+const DATA = {{ data_json|safe }};
+
+// ------------------------------------------------------------------ helpers
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function wrap(text, width) {               // split a name into lines of ~width characters
+  const words = String(text).split(" "); const lines = []; let cur = "";
+  for (const w of words) { if ((cur + " " + w).trim().length > width && cur) { lines.push(cur); cur = w; } else cur = (cur + " " + w).trim(); }
+  if (cur) lines.push(cur); return lines;
+}
+function multiline(svg, x, y, lines, attrs = {}) {
+  const t = el("text", { x, y, ...attrs });
+  lines.forEach((l, i) => t.appendChild(el("tspan", { x, dy: i === 0 ? 0 : "1.15em" }, l)));
+  svg.appendChild(t); return t;
+}
+function fmt(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "";
+  return Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en") : String(+v.toFixed(2));
+}
+function niceStep(range, n) {             // a round step (1, 2, 2.5, 5 × 10^k) giving about n ticks
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
+}
+const short = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+
+// ------------------------------------------------------------------ comparison table
+function renderComparison(base) {
+  const specs = DATA.compared;
+  let html = "<tr><th>Laptop</th>" + specs.map((s) => `<th>${esc(s)}</th>`).join("") + "</tr>";
+  for (const n of DATA.laptops) {
+    const row = DATA.comp[base][n];
+    html += `<tr class="${n === base ? "base" : ""}"><td>${esc(n)}${n === base ? " (base)" : ""}</td>`;
+    for (const s of specs) {
+      const [text, verdict, , status] = row[s];
+      const cls = status === "missing" ? "missing" : verdict > 0 ? "better" : verdict < 0 ? "worse" : "";
+      html += `<td class="${cls}">${esc(text)}</td>`;
+    }
+    html += "</tr>";
+  }
+  $("#comp").innerHTML = html;
+}
+
+// ------------------------------------------------------------------ per-spec charts
+function specChart(spec, base) {
+  const q = DATA.quantity[spec.name];
+  const names = DATA.laptops.filter((n) => q[n] !== null).sort((a, b) => q[a] - q[b]);
+  const missing = DATA.laptops.filter((n) => q[n] === null);
+  const W = 640, H = 360, L = spec.ranked && !spec.usesScore ? 110 : 84, R = 16, T = 34, B = 104;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%" });
+  const pw = W - L - R, ph = H - T - B, step = pw / Math.max(names.length, 1);
+  const xs = (i) => L + step * (i + 0.5);
+  const vals = names.map((n) => q[n]);
+  let lo, hi, tick = 1;
+  if (spec.ranked && !spec.usesScore) { lo = 0; hi = Math.max(...vals) + 0.6; }
+  else {
+    const mn = spec.ranked ? 0 : Math.min(...vals), mx = Math.max(...vals);
+    const span = (mx - mn) || Math.abs(mx) * 0.2 || 1;
+    tick = niceStep(span * 1.25, 4);
+    lo = spec.ranked ? 0 : Math.floor((mn - span * 0.08) / tick) * tick;
+    hi = Math.ceil((mx + span * 0.12) / tick) * tick;
+    if (!spec.ranked && mn >= 0 && lo < 0) lo = 0;
+  }
+  const ys = (v) => T + ph - (v - lo) / (hi - lo) * ph;
+
+  // y axis + grid
+  if (spec.ranked && !spec.usesScore) {
+    for (const t of spec.tiers) {
+      const y = ys(t.tier);
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#eee" }));
+      multiline(svg, L - 6, y + 3, wrap(t.label, 16), { "text-anchor": "end", "font-size": 10, fill: "#555" });
+    }
+  } else {
+    for (let v = lo; v <= hi + tick * 0.01; v += tick) {
+      const y = ys(v);
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#eee" }));
+      svg.appendChild(el("text", { x: L - 6, y: y + 3, "text-anchor": "end", "font-size": 10, fill: "#777" }, fmt(v)));
+    }
+  }
+  svg.appendChild(el("line", { x1: L, x2: W - R, y1: T + ph, y2: T + ph, stroke: "#333" }));
+
+  // marks
+  if (spec.ranked) {
+    names.forEach((n, i) => {
+      const y = ys(q[n]), bw = Math.min(step * 0.65, 60);
+      const r = el("rect", { x: xs(i) - bw / 2, y, width: bw, height: T + ph - y, fill: n === base ? "var(--base)" : "var(--other)", rx: 2 });
+      r.appendChild(el("title", {}, `${n}\n${DATA.values[n][spec.name]}${spec.usesScore ? " · score " + fmt(q[n]) : ""}`));
+      svg.appendChild(r);
+      const lines = wrap(DATA.values[n][spec.name], Math.max(8, Math.floor(step / 6))).slice(0, 3);
+      multiline(svg, xs(i), y - 5 - 11 * (lines.length - 1), lines, { "text-anchor": "middle", "font-size": 9, fill: "#333" });
+    });
+  } else {
+    const pts = names.map((n, i) => `${xs(i)},${ys(q[n])}`).join(" ");
+    svg.appendChild(el("polyline", { points: pts, fill: "none", stroke: "var(--other)", "stroke-opacity": 0.55, "stroke-width": 2 }));
+    names.forEach((n, i) => {
+      const c = el("circle", { cx: xs(i), cy: ys(q[n]), r: n === base ? 7 : 5, fill: n === base ? "var(--base)" : "var(--other)" });
+      c.appendChild(el("title", {}, `${n}\n${spec.name}: ${fmt(q[n])}`));
+      svg.appendChild(c);
+      svg.appendChild(el("text", { x: xs(i), y: ys(q[n]) - 11, "text-anchor": "middle", "font-size": 10, fill: "#333" }, fmt(q[n])));
+    });
+  }
+  // x labels
+  names.forEach((n, i) => {
+    const x = xs(i), y = T + ph + 12;
+    const t = el("text", { x, y, transform: `rotate(-32 ${x} ${y})`, "text-anchor": "end", "font-size": 9.5,
+      fill: n === base ? "#E07B39" : "#333", "font-weight": n === base ? 700 : 400 }, short(n, 24));
+    t.appendChild(el("title", {}, n));
+    svg.appendChild(t);
+  });
+  const card = document.createElement("div"); card.className = "card";
+  const hint = spec.compare === "lower" ? "lower is better" : spec.ranked && !spec.usesScore ? "taller = better rank" : "higher is better";
+  card.innerHTML = `<h4>${esc(spec.name)} <span class="muted">· sorted low → high (${hint})</span></h4>`;
+  card.appendChild(svg);
+  if (missing.length) card.insertAdjacentHTML("beforeend", `<div class="muted">No data: ${esc(missing.join(", "))}</div>`);
+  return card;
+}
+function renderSpecCharts(base) {
+  const box = $("#spec-charts"); box.innerHTML = "";
+  for (const s of DATA.charted) box.appendChild(specChart(s, base));
+}
+
+// ------------------------------------------------------------------ per-laptop cards
+function radar(laptop, base) {
+  const specs = DATA.goodnessSpecs.filter((s) => DATA.goodness[s][laptop] !== null && DATA.goodness[s][base] !== null);
+  const W = 420, H = 400, cx = W / 2, cy = 195, R = 130;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%" });
+  if (specs.length < 3) { svg.appendChild(el("text", { x: 20, y: 30, fill: "#777" }, "Not enough data for a radar chart")); return svg; }
+  const ang = (i) => -Math.PI / 2 + 2 * Math.PI * i / specs.length;
+  for (const f of [0.25, 0.5, 0.75, 1]) {
+    svg.appendChild(el("polygon", { points: specs.map((_, i) => `${cx + R * f * Math.cos(ang(i))},${cy + R * f * Math.sin(ang(i))}`).join(" "), fill: "none", stroke: "#e5e5e5" }));
+  }
+  specs.forEach((s, i) => {
+    svg.appendChild(el("line", { x1: cx, y1: cy, x2: cx + R * Math.cos(ang(i)), y2: cy + R * Math.sin(ang(i)), stroke: "#e5e5e5" }));
+    const lx = cx + (R + 16) * Math.cos(ang(i)), ly = cy + (R + 16) * Math.sin(ang(i));
+    const anchor = Math.abs(Math.cos(ang(i))) < 0.2 ? "middle" : Math.cos(ang(i)) > 0 ? "start" : "end";
+    multiline(svg, lx, ly, wrap(s, 14), { "text-anchor": anchor, "font-size": 9.5, fill: "#444" });
+  });
+  const shape = (n, color, op, w) => {
+    const pts = specs.map((s, i) => { const g = Math.max(DATA.goodness[s][n], 3) / 100; return `${cx + R * g * Math.cos(ang(i))},${cy + R * g * Math.sin(ang(i))}`; }).join(" ");
+    svg.appendChild(el("polygon", { points: pts, fill: color, "fill-opacity": op, stroke: color, "stroke-width": w }));
+  };
+  if (laptop !== base) shape(base, "#E07B39", 0.10, 1.5);
+  shape(laptop, "#4C72B0", 0.22, 2);
+  const ly = H - 14;
+  svg.appendChild(el("rect", { x: 20, y: ly - 9, width: 12, height: 4, fill: "#4C72B0" }));
+  svg.appendChild(el("text", { x: 38, y: ly - 4, "font-size": 10 }, laptop.length > 30 ? laptop.slice(0, 30) + "…" : laptop));
+  if (laptop !== base) {
+    svg.appendChild(el("rect", { x: 225, y: ly - 9, width: 12, height: 4, fill: "#E07B39" }));
+    svg.appendChild(el("text", { x: 243, y: ly - 4, "font-size": 10 }, "Base: " + (base.length > 24 ? base.slice(0, 24) + "…" : base)));
+  }
+  return svg;
+}
+function advantageBars(laptop, base) {
+  const row = DATA.comp[base][laptop];
+  let html = '<div class="adv">';
+  for (const s of DATA.compared) {
+    const [text, verdict, ratio, status] = row[s];
+    if (status !== "ok" || verdict === null) continue;
+    const spec = DATA.specByName[s];
+    let adv = ratio === null ? 0 : ratio * (spec.compare === "lower" ? -1 : 1);
+    const pct = Math.max(-1, Math.min(1, adv / 1.5)) * 50;        // ±150 % fills half the track
+    const color = verdict > 0 ? "var(--good)" : verdict < 0 ? "var(--bad)" : "#999";
+    const left = pct >= 0 ? 50 : 50 + pct, width = Math.abs(pct);
+    const lblPos = pct >= 0 ? `left:calc(${50 + width}% + 4px)` : `right:calc(${50 + width}% + 4px)`;
+    html += `<div>${esc(s)}</div><div class="track"><div class="fill" style="left:${left}%;width:${width}%;background:${color}"></div>
+             <div class="lbl" style="${lblPos};color:${color}">${esc(text)}</div></div>`;
+  }
+  return html + "</div>";
+}
+function renderLaptops(base) {
+  const box = $("#laptop-cards"); box.innerHTML = "";
+  for (const n of DATA.laptops) {
+    const div = document.createElement("div");
+    div.className = "laptop" + (n === base ? " isbase" : "");
+    const facts = DATA.facts[n].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+    div.innerHTML = `<h3>${esc(n)}${n === base ? " (base)" : ""}</h3>
+      <details><summary class="muted">Specs and notes</summary><dl>${facts}</dl></details>
+      <div class="cols"><div><h4>vs base</h4>${n === base ? '<p class="muted">This is the base laptop.</p>' : advantageBars(n, base)}</div>
+      <div class="radar"></div></div>`;
+    div.querySelector(".radar").appendChild(radar(n, base));
+    box.appendChild(div);
+  }
+}
+
+// ------------------------------------------------------------------ base switching
+function highlightRows(base) {
+  for (const tr of document.querySelectorAll("tr[data-laptop]")) tr.classList.toggle("base", tr.dataset.laptop === base);
+  for (const s of document.querySelectorAll(".basename")) s.textContent = base;
+}
+function setBase(base) {
+  if (!DATA.comp[base]) base = DATA.defaultBase;
+  $("#base").value = base;
+  renderComparison(base); renderSpecCharts(base); renderLaptops(base); highlightRows(base);
+  history.replaceState(null, "", "#base=" + encodeURIComponent(base));
+}
+$("#base").addEventListener("change", (e) => setBase(e.target.value));
+const fromHash = decodeURIComponent((location.hash.match(/base=([^&]+)/) || [])[1] || "");
+setBase(fromHash || DATA.defaultBase);
+</script>
+</body>
+</html>

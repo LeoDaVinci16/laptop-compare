@@ -1,0 +1,13 @@
+Laptop,Price (€),CPU,RAM (GB),RAM upgradeable,SSD (GB),Battery (Wh),Weight (kg),Screen (in),Numpad,Panel,Resolution,Refresh (Hz),Brightness (nits),USB-C ports,USB-A ports,Thunderbolt or USB4,Price seen at,Notes,
+HP ProBook 4 G1i 14 (current),1219,Intel Core Ultra 7 255U,16,Yes,512,56,1.39,14,No,IPS,1920×1200,60,,2,2,No,PcComponentes (price comparator),"Your work laptop. Retail price; your company probably paid less. RAM: 2× SO-DIMM, up to 64 GB.",
+Asus ExpertBook P3 16 (PM3606CKA),1146.66,AMD Ryzen AI 7 350,32,Yes,1000,70,1.79,16,Yes,IPS,1920×1200,60,300,2,2,No,PcComponentes,"Only one with a numpad, and the heaviest. 16 h in ITPro's video battery test. 2.5K screen on some versions.",
+Asus Zenbook 14 OLED (UM3406KA),1249.95,AMD Ryzen AI 7 350,32,No,1000,75,1.2,14,No,OLED,1920×1200,60,,2,1,USB4,LDLC,"Light, OLED, big battery. 3K 120 Hz screen on some versions.",
+LG gram 14 (14Z90T),1289,Intel Core Ultra 7 255H,32,No,1000,72,1.12,14,No,IPS,1920×1200,60,350,2,2,Thunderbolt 4,PcComponentes,Lightest here.,,,
+MSI Prestige 14 AI Evo (C2HMG),1299,Intel Core Ultra 7 255H,32,Unknown,1000,90,1.7,14,No,IPS,1920×1200,144,400,2,1,Thunderbolt 4,PcComponentes,"Biggest battery and a 144 Hz screen, but heavy for a 14-inch.",
+Lenovo ThinkPad E14 Gen 7 (258V),1455.97,Intel Core Ultra 7 258V,32,No,512,64,1.32,14,No,IPS,1920×1200,60,300,2,2,Thunderbolt 4,PcComponentes,"Price is for the 512 GB version. Some versions have a 48 Wh battery, so check the exact model.",
+Acer Aspire 14 AI (A14-53M),999,Intel Core Ultra 7 258V,32,No,1000,65,1.24,14,No,IPS,1920×1200,,,2,2,Thunderbolt 4,PcComponentes,Cheapest with 32 GB. Some versions are OLED. Weight 1.24–1.40 kg depending on version; refresh rate not confirmed.,
+Lenovo ThinkPad T14 Gen 7 (355),2893.84,Intel Core Ultra 7 355,32,Yes,1000,60,1.27,14,No,IPS,1920×1200,60,,2,2,Thunderbolt 4,PCBox,"Over budget in this configuration. Best keyboard, easiest to repair (LPCAMM2 RAM). 75 Wh battery optional. Port counts not confirmed.",
+Mac,2000,M1,32,Yes,1000,60,1.27,14,No,IPS,1920×1201,60,,2,2,Thunderbolt 5,PCBox,"Over budget in this configuration. Best keyboard, easiest to repair (LPCAMM2 RAM). 75 Wh battery optional. Port counts not confirmed.",
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+

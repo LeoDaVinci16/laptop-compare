@@ -1,0 +1,78 @@
+"""Find everything that stops a fair comparison and say how to fix it.
+
+These are the same alerts as the spreadsheet: a spec without a type, a ranked value
+that is not in its rank file, a missing rank file, numbers that are not numbers...
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pandas as pd
+
+from .data import COMPARE_TYPES, RANKED, Dataset, slugify
+
+ERROR = "error"      # the comparison for that cell/spec can't be made
+WARNING = "warning"  # the comparison works, but something looks wrong
+
+
+@dataclass
+class Issue:
+    level: str
+    message: str
+    fix: str
+
+    def __str__(self) -> str:
+        icon = "⚠" if self.level == ERROR else "•"
+        return f"{icon} {self.message}\n    → {self.fix}"
+
+
+def find_issues(ds: Dataset) -> list[Issue]:
+    issues: list[Issue] = []
+
+    dupes = ds.laptops.index[ds.laptops.index.duplicated()].unique()
+    for name in dupes:
+        issues.append(Issue(ERROR, f"Laptop '{name}' appears more than once in laptops.csv.",
+                            "Give each laptop a unique name (add the model code)."))
+
+    for col in ds.laptops.columns:
+        if col not in ds.specs:
+            issues.append(Issue(ERROR, f"Column '{col}' in laptops.csv has no type.",
+                                f"Add a row to specs.csv: {col},higher|lower|ranked|info"))
+
+    for spec in ds.specs.values():
+        if spec.name not in ds.laptops.columns:
+            issues.append(Issue(WARNING, f"Spec '{spec.name}' is in specs.csv but not a column of laptops.csv.",
+                                "Check the spelling (it must match the column title exactly) or remove the row."))
+            continue
+        if spec.compare not in COMPARE_TYPES:
+            issues.append(Issue(ERROR, f"Spec '{spec.name}' has an unknown type '{spec.compare}'.",
+                                "Use one of: " + ", ".join(COMPARE_TYPES)))
+            continue
+
+        values = ds.laptops[spec.name]
+        if spec.is_numeric:
+            raw = ds.raw[spec.name].to_dict() if ds.raw is not None else {}
+            bad = [n for n in ds.names if raw.get(n, "") != "" and pd.isna(values[n])]
+            for n in bad:
+                issues.append(Issue(WARNING, f"'{n}' → {spec.name} = '{raw[n]}' is not a number.",
+                                    "Write only the number (e.g. 1219.5) in laptops.csv."))
+
+        if spec.compare == RANKED:
+            file = spec.rank_file or f"{slugify(spec.name)}.csv"
+            table = ds.ranks.get(spec.name)
+            if table is None:
+                issues.append(Issue(ERROR, f"Ranked spec '{spec.name}' has no rank file (ranks/{file}).",
+                                    f"Create ranks/{file} with columns value,rank,score,details."))
+                continue
+            missing = sorted({v for v in values if v and not table.has(v)})
+            for v in missing:
+                used_by = [n for n in ds.names if values[n] == v]
+                issues.append(Issue(ERROR, f"{spec.name} '{v}' is not ranked (used by {', '.join(used_by)}).",
+                                    f"Add a row to ranks/{table.path.name}: {v},<rank>,<score (optional)>,<details>"))
+            no_rank = table.table.index[table.table["rank"].isna()]
+            for v in no_rank:
+                issues.append(Issue(ERROR, f"'{v}' in ranks/{table.path.name} has no rank number.",
+                                    "Fill the rank column (1 = best)."))
+    return issues
+
