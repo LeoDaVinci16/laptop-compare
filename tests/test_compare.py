@@ -177,3 +177,42 @@ def test_unranked_value_without_rank_is_reported_after_adding(tmp_data):
 
     msgs = add_laptop(tmp_data, {"Laptop": "Y", "CPU": "Apple M4"})
     assert any("Still to do" in m and "Apple M4" in m for m in msgs)
+
+
+def test_edit_laptop_replaces_only_its_row(tmp_data):
+    from laptop_compare.data import load_selection, save_selection
+    from laptop_compare.editing import update_laptop
+
+    save_selection(tmp_data, {"laptops_off": ["LG gram 14 (14Z90T)"], "specs_off": []})
+    before = load_dataset(tmp_data)
+    values = {c: before.raw.at["LG gram 14 (14Z90T)", c] for c in before.laptops.columns}
+    values.update({"Laptop": "LG gram 14 2025", "Price (€)": "1.199,00"})
+    msgs = update_laptop(tmp_data, "LG gram 14 (14Z90T)", values)
+    assert any("Renamed" in m for m in msgs)
+    after = load_dataset(tmp_data)
+    assert after.names.index("LG gram 14 2025") == before.names.index("LG gram 14 (14Z90T)")   # same position
+    assert after.laptops.at["LG gram 14 2025", "Price (€)"] == 1199
+    assert len(after.names) == len(before.names)
+    assert load_selection(tmp_data)["laptops_off"] == ["LG gram 14 2025"]                      # selection follows the rename
+    other = "Acer Aspire 14 AI (A14-53M)"
+    assert after.raw.loc[other].tolist() == before.raw.loc[other].tolist()                    # other rows untouched
+
+
+def test_edit_refuses_taking_another_laptops_name(tmp_data):
+    from laptop_compare.editing import AddLaptopError, update_laptop
+
+    with pytest.raises(AddLaptopError, match="already"):
+        update_laptop(tmp_data, "LG gram 14 (14Z90T)", {"Laptop": BASE})
+
+
+def test_save_by_name_replaces_or_adds(tmp_data):
+    from laptop_compare.editing import save_laptop
+
+    before = load_dataset(tmp_data)
+    msi = "MSI Prestige 14 AI Evo (C2HMG)"
+    values = {c: before.raw.at[msi, c] for c in before.laptops.columns} | {"Laptop": msi, "Price (€)": "1199"}
+    assert "Updated" in save_laptop(tmp_data, values)[0]                 # same name -> replaced
+    after = load_dataset(tmp_data)
+    assert len(after.names) == len(before.names) and after.laptops.at[msi, "Price (€)"] == 1199
+    assert "Added" in save_laptop(tmp_data, values | {"Laptop": "MSI copy"})[0]   # new name -> added
+    assert len(load_dataset(tmp_data).names) == len(before.names) + 1

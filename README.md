@@ -41,10 +41,14 @@ listening only on this computer). The page has four tabs:
 
 | Tab | What it does |
 |---|---|
-| **Report** | everything below (comparison, charts, laptop cards) for the selected laptops and specs |
-| **Laptops** | tick/untick laptops to keep charts readable or narrow down to finalists (filter box, all/none/invert) |
+| **Home** | entrance page: base laptop, key numbers, highlights, then summary, comparison, values and overview |
+| **Per spec** | one chart per spec, selected laptops sorted low → high |
+| **Per laptop** | each laptop vs the base (advantage bars + radar), with a "jump to" menu |
+| **Laptops** | tick/untick laptops to keep charts readable or narrow down to finalists; **✎ Edit** opens a laptop in the form to correct it |
 | **Specs** | tick/untick the specs that matter to you (e.g. drop Resolution); scores and "best" update too |
-| **Add laptop** | a form with one box per spec; new CPUs/ranked values can be ranked right there |
+| **Add laptop** | a form with one box per spec; new CPUs/ranked values can be ranked right there (also used for editing) |
+
+Editing replaces only that laptop's row in `laptops.csv` (renaming works; the saved selection follows the new name).
 
 **Save as default** writes the ticks to `data/selection.json` (it lists what is switched *off*,
 so new laptops and specs appear switched on). The CSVs and the Quarto report also use it;

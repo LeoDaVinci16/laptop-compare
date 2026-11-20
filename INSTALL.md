@@ -41,7 +41,7 @@ There are two ways, both just a double-click in the project folder:
 
 | Double-click | What it does |
 |---|---|
-| **`run_app.bat`** | Opens the **app** in your browser: the report plus the tabs to **add laptops**, choose **which laptops** and **which specs** to compare, and save that choice. Keep the black window open while you use it; close it to stop. |
+| **`run_app.bat`** | Opens the **app** in your browser: Home, Per spec and Per laptop pages, plus tabs to choose **which laptops** and **which specs** to compare, **add** laptops and **edit** them (✎ Edit in the Laptops tab). Keep the black window open while you use it; close it to stop. |
 | **`run_report.bat`** | Writes the files in `output\` (CSVs, charts, `report.html`, `report.qmd`) and opens `report.html`. |
 
 `report.html` also has the Laptops and Specs tabs (they work without the app); only adding
@@ -71,7 +71,7 @@ table and chart is redrawn. `--base` only sets which one is selected when the pa
 the base used in the CSVs and the Quarto report).
 
 ## 5. Edit the data
-The easiest way is the **Add laptop** tab in the app (`run_app.bat`). If you type a CPU that
+The easiest way is the app (`run_app.bat`): the **Add laptop** tab for new ones, **✎ Edit** in the **Laptops** tab to correct one. If you type a CPU that
 isn't known yet, extra boxes appear to rank it, and it's added to `ranks\cpu.csv` too.
 
 You can also open the CSVs in the `data` folder with LibreOffice/Excel or any text editor:

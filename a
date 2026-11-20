@@ -1,0 +1,625 @@
+warning: in the working copy of 'INSTALL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/laptop_compare/data.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/laptop_compare/editing.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/laptop_compare/report.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/laptop_compare/server.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/laptop_compare/templates/report.html.j2', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_compare.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/INSTALL.md b/INSTALL.md[m
+[1mindex 76ecc79..58686ab 100644[m
+[1m--- a/INSTALL.md[m
+[1m+++ b/INSTALL.md[m
+[36m@@ -41,7 +41,7 @@[m [mThere are two ways, both just a double-click in the project folder:[m
+ [m
+ | Double-click | What it does |[m
+ |---|---|[m
+[31m-| **`run_app.bat`** | Opens the **app** in your browser: the report plus the tabs to **add laptops**, choose **which laptops** and **which specs** to compare, and save that choice. Keep the black window open while you use it; close it to stop. |[m
+[32m+[m[32m| **`run_app.bat`** | Opens the **app** in your browser: Home, Per spec and Per laptop pages, plus tabs to choose **which laptops** and **which specs** to compare, **add** laptops and **edit** them (✎ Edit in the Laptops tab). Keep the black window open while you use it; close it to stop. |[m
+ | **`run_report.bat`** | Writes the files in `output\` (CSVs, charts, `report.html`, `report.qmd`) and opens `report.html`. |[m
+ [m
+ `report.html` also has the Laptops and Specs tabs (they work without the app); only adding[m
+[36m@@ -71,7 +71,7 @@[m [mtable and chart is redrawn. `--base` only sets which one is selected when the pa[m
+ the base used in the CSVs and the Quarto report).[m
+ [m
+ ## 5. Edit the data[m
+[31m-The easiest way is the **Add laptop** tab in the app (`run_app.bat`). If you type a CPU that[m
+[32m+[m[32mThe easiest way is the app (`run_app.bat`): the **Add laptop** tab for new ones, **✎ Edit** in the **Laptops** tab to correct one. If you type a CPU that[m
+ isn't known yet, extra boxes appear to rank it, and it's added to `ranks\cpu.csv` too.[m
+ [m
+ You can also open the CSVs in the `data` folder with LibreOffice/Excel or any text editor:[m
+[1mdiff --git a/README.md b/README.md[m
+[1mindex fab3513..ebe528e 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -41,10 +41,14 @@[m [mlistening only on this computer). The page has four tabs:[m
+ [m
+ | Tab | What it does |[m
+ |---|---|[m
+[31m-| **Report** | everything below (comparison, charts, laptop cards) for the selected laptops and specs |[m
+[31m-| **Laptops** | tick/untick laptops to keep charts readable or narrow down to finalists (filter box, all/none/invert) |[m
+[32m+[m[32m| **Home** | entrance page: base laptop, key numbers, highlights, then summary, comparison, values and overview |[m
+[32m+[m[32m| **Per spec** | one chart per spec, selected laptops sorted low → high |[m
+[32m+[m[32m| **Per laptop** | each laptop vs the base (advantage bars + radar), with a "jump to" menu |[m
+[32m+[m[32m| **Laptops** | tick/untick laptops to keep charts readable or narrow down to finalists; **✎ Edit** opens a laptop in the form to correct it |[m
+ | **Specs** | tick/untick the specs that matter to you (e.g. drop Resolution); scores and "best" update too |[m
+[31m-| **Add laptop** | a form with one box per spec; new CPUs/ranked values can be ranked right there |[m
+[32m+[m[32m| **Add laptop** | a form with one box per spec; new CPUs/ranked values can be ranked right there (also used for editing) |[m
+[32m+[m
+[32m+[m[32mEditing replaces only that laptop's row in `laptops.csv` (renaming works; the saved selection follows the new name).[m
+ [m
+ **Save as default** writes the ticks to `data/selection.json` (it lists what is switched *off*,[m
+ so new laptops and specs appear switched on). The CSVs and the Quarto report also use it;[m
+[1mdiff --git a/src/laptop_compare/editing.py b/src/laptop_compare/editing.py[m
+[1mindex b29fd3d..c5c5158 100644[m
+[1m--- a/src/laptop_compare/editing.py[m
+[1m+++ b/src/laptop_compare/editing.py[m
+[36m@@ -59,28 +59,14 @@[m [mdef _clean_number(text: str) -> str:[m
+     return f"{n:g}" if abs(n) < 1e15 else str(n)[m
+ [m
+ [m
+[31m-def add_laptop(data_dir: str | Path, values: dict[str, str], new_ranks: dict[str, dict] | None = None) -> list[str]:[m
+[31m-    """Append a laptop to laptops.csv.[m
+[31m-[m
+[31m-    values     {column title: value}; the laptop name goes under the first column's title.[m
+[31m-    new_ranks  {spec: {"rank": "3", "score": "700", "details": "..."}} for ranked values that are not[m
+[31m-               in their rank file yet (e.g. a new CPU). They are appended to ranks/<file>.csv.[m
+[31m-[m
+[31m-    Returns a list of messages (what was done, plus anything still to fix).[m
+[31m-    """[m
+[31m-    data_dir = Path(data_dir)[m
+[31m-    new_ranks = new_ranks or {}[m
+[31m-    ds = load_dataset(data_dir)[m
+[31m-    values = {k: str(v).strip() for k, v in values.items() if v is not None}[m
+[31m-[m
+[32m+[m[32mdef _build_row(ds, values: dict[str, str], original: str | None = None) -> list[str]:[m
+[32m+[m[32m    """Check the form values and return the CSV row (name first, then every column in file order)."""[m
+     name = values.get(ds.name_column, "")[m
+     if not name:[m
+         raise AddLaptopError("The laptop needs a name.")[m
+[31m-    if name in ds.names:[m
+[32m+[m[32m    if name in ds.names and name != original:[m
+         raise AddLaptopError(f"There is already a laptop called '{name}'. Use a different name (add the model code).")[m
+[31m-[m
+[31m-    row = [name][m
+[31m-    errors = [][m
+[32m+[m[32m    row, errors = [name], [][m
+     for col in ds.laptops.columns:[m
+         v = values.get(col, "")[m
+         spec = ds.specs.get(col)[m
+[36m@@ -92,8 +78,11 @@[m [mdef add_laptop(data_dir: str | Path, values: dict[str, str], new_ranks: dict[str[m
+         row.append(v)[m
+     if errors:[m
+         raise AddLaptopError("Please fix: " + "; ".join(errors))[m
+[32m+[m[32m    return row[m
+ [m
+[31m-    # new rank values first, so the laptop is complete as soon as it is added[m
+[32m+[m
+[32m+[m[32mdef _add_new_ranks(ds, data_dir: Path, values: dict[str, str], new_ranks: dict[str, dict]) -> list[str]:[m
+[32m+[m[32m    """Append ranked values that are new (e.g. a new CPU) to their rank file."""[m
+     messages = [][m
+     for spec_name, info in new_ranks.items():[m
+         spec = ds.specs.get(spec_name)[m
+[36m@@ -114,15 +103,80 @@[m [mdef add_laptop(data_dir: str | Path, values: dict[str, str], new_ranks: dict[str[m
+                     header=["value", "rank", "score", "details"])[m
+         messages.append(f"Added {spec_name} '{value}' to ranks/{path.name} with rank {rank}"[m
+                         + (f" and score {score}" if score else "") + ".")[m
+[32m+[m[32m    return messages[m
+ [m
+[31m-    _append_row(data_dir / "laptops.csv", row)[m
+[31m-    messages.insert(0, f"Added '{name}' to laptops.csv.")[m
+ [m
+[31m-    # anything still missing?[m
+[32m+[m[32mdef _still_to_do(data_dir: Path, name: str) -> list[str]:[m
+     from .validate import find_issues[m
+ [m
+[31m-    ds2 = load_dataset(data_dir)[m
+[31m-    for issue in find_issues(ds2):[m
+[31m-        if f"used by {name}" in issue.message or name in issue.message:[m
+[31m-            messages.append(f"Still to do: {issue.message} → {issue.fix}")[m
+[31m-    return messages[m
+[32m+[m[32m    return [f"Still to do: {i.message} → {i.fix}" for i in find_issues(load_dataset(data_dir))[m
+[32m+[m[32m            if f"used by {name}" in i.message or f"'{name}'" in i.message][m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef add_laptop(data_dir: str | Path, values: dict[str, str], new_ranks: dict[str, dict] | None = None) -> list[str]:[m
+[32m+[m[32m    """Append a laptop to laptops.csv.[m
+[32m+[m
+[32m+[m[32m    values     {column title: value}; the laptop name goes under the first column's title.[m
+[32m+[m[32m    new_ranks  {spec: {"rank": "3", "score": "700", "details": "..."}} for ranked values that are not[m
+[32m+[m[32m               in their rank file yet (e.g. a new CPU). They are appended to ranks/<file>.csv.[m
+[32m+[m
+[32m+[m[32m    Returns a list of messages (what was done, plus anything still to fix).[m
+[32m+[m[32m    """[m
+[32m+[m[32m    data_dir = Path(data_dir)[m
+[32m+[m[32m    ds = load_dataset(data_dir)[m
+[32m+[m[32m    values = {k: str(v).strip() for k, v in values.items() if v is not None}[m
+[32m+[m[32m    row = _build_row(ds, values)[m
+[32m+[m[32m    messages = _add_new_ranks(ds, data_dir, values, new_ranks or {})[m
+[32m+[m[32m    _append_row(data_dir / "laptops.csv", row)[m
+[32m+[m[32m    return [f"Added '{row[0]}' to laptops.csv.", *messages, *_still_to_do(data_dir, row[0])][m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef update_laptop(data_dir: str | Path, original: str, values: dict[str, str],[m
+[32m+[m[32m                  new_ranks: dict[str, dict] | None = None) -> list[str]:[m
+[32m+[m[32m    """Replace the row of laptop `original` in laptops.csv with the new values (it can be renamed).[m
+[32m+[m[32m    The rest of the file (other rows, separator, encoding) is kept as it is."""[m
+[32m+[m[32m    data_dir = Path(data_dir)[m
+[32m+[m[32m    ds = load_dataset(data_dir)[m
+[32m+[m[32m    if original not in ds.names:[m
+[32m+[m[32m        raise AddLaptopError(f"'{original}' is no longer in laptops.csv (was it renamed or removed?). Refresh the page.")[m
+[32m+[m[32m    values = {k: str(v).strip() for k, v in values.items() if v is not None}[m
+[32m+[m[32m    row = _build_row(ds, values, original=original)[m
+[32m+[m[32m    messages = _add_new_ranks(ds, data_dir, values, new_ranks or {})[m
+[32m+[m[32m    _replace_row(data_dir / "laptops.csv", original, row)[m
+[32m+[m[32m    if row[0] != original:                      # keep the saved selection pointing at the new name[m
+[32m+[m[32m        from .data import SELECTION_FILE, load_selection, save_selection[m
+[32m+[m
+[32m+[m[32m        if (data_dir / SELECTION_FILE).exists():[m
+[32m+[m[32m            sel = load_selection(data_dir)[m
+[32m+[m[32m            sel["laptops_off"] = [row[0] if n == original else n for n in sel["laptops_off"]][m
+[32m+[m[32m            save_selection(data_dir, sel)[m
+[32m+[m[32m        messages.insert(0, f"Renamed '{original}' to '{row[0]}'.")[m
+[32m+[m[32m    return [f"Saved the changes to '{row[0]}' in laptops.csv.", *messages, *_still_to_do(data_dir, row[0])][m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _replace_row(path: Path, name: str, new_row: list[str]) -> None:[m
+[32m+[m[32m    """Rewrite laptops.csv with the record whose first cell is `name` replaced."""[m
+[32m+[m[32m    raw = path.read_bytes()[m
+[32m+[m[32m    bom = raw.startswith(b"\xef\xbb\xbf")[m
+[32m+[m[32m    enc, sep = _file_format(path)[m
+[32m+[m[32m    text = raw.decode("utf-8-sig" if enc == "utf-8" else enc, errors="replace")[m
+[32m+[m[32m    newline = "\r\n" if "\r\n" in text else "\n"[m
+[32m+[m[32m    records = list(csv.reader(io.StringIO(text), delimiter=sep))[m
+[32m+[m[32m    header_seen = False[m
+[32m+[m[32m    for i, rec in enumerate(records):[m
+[32m+[m[32m        if not any(c.strip() for c in rec):[m
+[32m+[m[32m            continue[m
+[32m+[m[32m        if not header_seen:[m
+[32m+[m[32m            header_seen = True[m
+[32m+[m[32m            continue[m
+[32m+[m[32m        if rec[0].strip() == name:[m
+[32m+[m[32m            records[i] = new_row + [""] * max(0, len(rec) - len(new_row))[m
+[32m+[m[32m            break[m
+[32m+[m[32m    else:[m
+[32m+[m[32m        raise AddLaptopError(f"Could not find '{name}' in {path.name}.")[m
+[32m+[m[32m    buf = io.StringIO()[m
+[32m+[m[32m    csv.writer(buf, delimiter=sep, lineterminator=newline).writerows(records)[m
+[32m+[m[32m    out = buf.getvalue()[m
+[32m+[m[32m    if not text.endswith(("\n", "\r")):[m
+[32m+[m[32m        out = out.rstrip("\r\n")[m
+[32m+[m[32m    path.write_bytes((b"\xef\xbb\xbf" if bom else b"") + out.encode(enc))[m
+[1mdiff --git a/src/laptop_compare/report.py b/src/laptop_compare/report.py[m
+[1mindex c4db193..b8f2f7e 100644[m
+[1m--- a/src/laptop_compare/report.py[m
+[1m+++ b/src/laptop_compare/report.py[m
+[36m@@ -145,6 +145,7 @@[m [mdef render_html(ds: Dataset, base: str, issues: list[Issue], selection: dict | N[m
+         "columns": list(ds.laptops.columns),[m
+         "specTypes": {c: (ds.specs[c].compare if c in ds.specs else "") for c in ds.laptops.columns},[m
+         "specNotes": {c: (ds.specs[c].notes if c in ds.specs else "") for c in ds.laptops.columns},[m
+[32m+[m[32m        "raw": {n: {c: str(ds.raw.at[n, c]) if ds.raw is not None else "" for c in ds.laptops.columns} for n in ds.names},[m
+         "rankValues": {s: list(t.table.sort_values("rank", kind="stable").index) for s, t in ds.ranks.items()},[m
+         "rankFiles": {s: t.path.name for s, t in ds.ranks.items()},[m
+         "issues": [{"level": i.level, "message": i.message, "fix": i.fix} for i in issues],[m
+[1mdiff --git a/src/laptop_compare/server.py b/src/laptop_compare/server.py[m
+[1mindex 28dd64e..4e657f5 100644[m
+[1m--- a/src/laptop_compare/server.py[m
+[1m+++ b/src/laptop_compare/server.py[m
+[36m@@ -17,7 +17,7 @@[m [mfrom http.server import BaseHTTPRequestHandler, ThreadingHTTPServer[m
+ from pathlib import Path[m
+ [m
+ from .data import DataFileError, apply_selection, load_dataset, load_selection, save_selection[m
+[31m-from .editing import AddLaptopError, add_laptop[m
+[32m+[m[32mfrom .editing import AddLaptopError, add_laptop, update_laptop[m
+ from .report import render_html[m
+ from .validate import find_issues[m
+ [m
+[36m@@ -44,6 +44,11 @@[m [mclass App:[m
+             messages = add_laptop(self.data_dir, body.get("values", {}), body.get("ranks", {}))[m
+         return {"ok": True, "messages": messages}[m
+ [m
+[32m+[m[32m    def update(self, body: dict) -> dict:[m
+[32m+[m[32m        with self.lock:[m
+[32m+[m[32m            messages = update_laptop(self.data_dir, body.get("original", ""), body.get("values", {}), body.get("ranks", {}))[m
+[32m+[m[32m        return {"ok": True, "messages": messages}[m
+[32m+[m
+     def save_selection(self, body: dict) -> dict:[m
+         with self.lock:[m
+             path = save_selection(self.data_dir, body)[m
+[36m@@ -88,7 +93,7 @@[m [mdef make_handler(app: App):[m
+                 body = json.loads(self.rfile.read(length) or b"{}")[m
+             except json.JSONDecodeError:[m
+                 return self._json(400, {"ok": False, "error": "Bad request."})[m
+[31m-            routes = {"/api/laptops": app.add, "/api/selection": app.save_selection}[m
+[32m+[m[32m            routes = {"/api/laptops": app.add, "/api/laptops/update": app.update, "/api/selection": app.save_selection}[m
+             handler = routes.get(self.path.split("?")[0])[m
+             if handler is None:[m
+                 return self._json(404, {"ok": False, "error": "Unknown action."})[m
+[1mdiff --git a/src/laptop_compare/templates/report.html.j2 b/src/laptop_compare/templates/report.html.j2[m
+[1mindex 48f4323..24f41eb 100644[m
+[1m--- a/src/laptop_compare/templates/report.html.j2[m
+[1m+++ b/src/laptop_compare/templates/report.html.j2[m
+[36m@@ -95,6 +95,29 @@[m
+   pre.row { background:#f6f8fa; border:1px solid var(--line); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }[m
+   #toast { position: fixed; right: 20px; bottom: 20px; max-width: 520px; padding: 12px 16px; border-radius: 8px; color:#fff;[m
+            background:#1f2937; box-shadow: 0 6px 24px rgba(0,0,0,.2); display:none; z-index: 50; font-size: 13.5px; white-space: pre-line; }[m
+[32m+[m[32m  .tab-sep { width: 1px; background: #475569; margin: 8px 10px; }[m
+[32m+[m[32m  .bar.hidden { display:none; }[m
+[32m+[m[32m  .hero { display:flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; margin: 22px 0 14px;[m
+[32m+[m[32m          background:#fff; border:1px solid var(--line); border-left: 6px solid var(--base); border-radius: 12px; padding: 18px 22px; }[m
+[32m+[m[32m  .hero-base { font-size: 24px; font-weight: 700; margin: 2px 0; }[m
+[32m+[m[32m  .tiles { display:flex; gap: 12px; flex-wrap: wrap; }[m
+[32m+[m[32m  .tile { background:#f6f8fb; border-radius: 10px; padding: 10px 16px; min-width: 120px; text-align:center; }[m
+[32m+[m[32m  .tile b { display:block; font-size: 24px; }[m
+[32m+[m[32m  .tile span { font-size: 12px; color: var(--muted); }[m
+[32m+[m[32m  .tile.bad { background: var(--miss); color: var(--miss-t); }[m
+[32m+[m[32m  .tile.ok { background: var(--better); color: var(--better-t); }[m
+[32m+[m[32m  .highlights { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 6px 0 14px; }[m
+[32m+[m[32m  .hl { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }[m
+[32m+[m[32m  .hl .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }[m
+[32m+[m[32m  .hl .v { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }[m
+[32m+[m[32m  .hl .d { font-size: 12.5px; color:#374151; }[m
+[32m+[m[32m  .shortcuts { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 8px; }[m
+[32m+[m[32m  .shortcut { display:block; text-decoration:none; color:inherit; background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }[m
+[32m+[m[32m  .shortcut:hover { border-color: var(--other); box-shadow: 0 2px 10px rgba(76,114,176,.12); }[m
+[32m+[m[32m  .shortcut b { display:block; color: var(--other); margin-bottom: 2px; }[m
+[32m+[m[32m  .shortcut span { font-size: 12.5px; color: var(--muted); }[m
+[32m+[m[32m  table.pick td.act { width: 70px; text-align:right; }[m
+[32m+[m[32m  .btn.small { padding: 3px 10px; font-size: 12px; }[m
+   @media (max-width: 900px) { .laptop .cols { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }[m
+ </style>[m
+ </head>[m
+[36m@@ -103,59 +126,89 @@[m
+   <h1>Laptop comparison</h1>[m
+   <p>generated {{ generated }} · data: {{ data_dir }}{% if server_mode %} · <strong>app mode</strong> (you can edit the data){% endif %}</p>[m
+   <div class="tabs">[m
+[31m-    <button data-tab="report" class="active">Report</button>[m
+[32m+[m[32m    <button data-tab="home" class="active">Home</button>[m
+[32m+[m[32m    <button data-tab="perspec">Per spec</button>[m
+[32m+[m[32m    <button data-tab="perlaptop">Per laptop</button>[m
+[32m+[m[32m    <span class="tab-sep"></span>[m
+     <button data-tab="laptops">Laptops <span class="count" id="count-laptops"></span></button>[m
+     <button data-tab="specs">Specs <span class="count" id="count-specs"></span></button>[m
+[31m-    <button data-tab="add">Add laptop</button>[m
+[32m+[m[32m    <button data-tab="add" id="add-tab-btn">Add laptop</button>[m
+   </div>[m
+ </header>[m
+ [m
+[31m-<!-- ================================================================== REPORT -->[m
+[31m-<section class="tab active" id="tab-report">[m
+[31m-<div class="bar">[m
+[32m+[m[32m<!-- base selector: shown on Home, Per spec and Per laptop -->[m
+[32m+[m[32m<div class="bar" id="base-bar">[m
+   <div><label for="base">Base laptop:</label> <select id="base"></select></div>[m
+[31m-  <nav><a href="#summary">Summary</a><a href="#comparison">Comparison</a><a href="#values">Values</a>[m
+[31m-    <a href="#overview">Overview</a><a href="#specs-charts">Per spec</a><a href="#laptops-cards">Per laptop</a></nav>[m
+[32m+[m[32m  <nav id="home-nav"><a href="#" data-jump="summary">Summary</a><a href="#" data-jump="comparison">Comparison</a>[m
+[32m+[m[32m    <a href="#" data-jump="values">Values</a><a href="#" data-jump="overview">Overview</a></nav>[m
+   <span class="muted" id="sel-summary"></span>[m
+ </div>[m
+[31m-<main>[m
+[31m-<h2 id="summary">Summary</h2>[m
+[31m-<div id="issues"></div>[m
+[31m-<h3>Best laptop for each spec <span class="muted">(among the laptops you selected)</span></h3>[m
+[31m-<div class="scroll"><table id="best"></table></div>[m
+ [m
+[31m-<h2 id="comparison">Comparison vs <span class="basename"></span></h2>[m
+[31m-<p class="legend muted">[m
+[31m-  <span style="background:var(--better);color:var(--better-t)">better than base</span>[m
+[31m-  <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>[m
+[31m-  <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>[m
+[31m-  % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.[m
+[31m-</p>[m
+[31m-<div class="scroll"><table id="comp"></table></div>[m
+[32m+[m[32m<!-- ================================================================== HOME -->[m
+[32m+[m[32m<section class="tab active" id="tab-home"><main>[m
+[32m+[m[32m  <div class="hero">[m
+[32m+[m[32m    <div>[m
+[32m+[m[32m      <div class="muted">Comparing against</div>[m
+[32m+[m[32m      <div class="hero-base basename"></div>[m
+[32m+[m[32m      <div class="muted" id="hero-sub"></div>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m    <div class="tiles">[m
+[32m+[m[32m      <div class="tile"><b id="tile-laptops"></b><span>laptops selected</span></div>[m
+[32m+[m[32m      <div class="tile"><b id="tile-specs"></b><span>specs compared</span></div>[m
+[32m+[m[32m      <div class="tile" id="tile-issues-box"><b id="tile-issues"></b><span>data issues</span></div>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  </div>[m
+[32m+[m[32m  <div class="highlights" id="highlights"></div>[m
+[32m+[m[32m  <div class="shortcuts">[m
+[32m+[m[32m    <a href="#" data-goto="perspec" class="shortcut"><b>Per spec →</b><span>every laptop sorted low → high for each spec</span></a>[m
+[32m+[m[32m    <a href="#" data-goto="perlaptop" class="shortcut"><b>Per laptop →</b><span>each laptop vs the base, with radar charts</span></a>[m
+[32m+[m[32m    <a href="#" data-goto="laptops" class="shortcut"><b>Laptops →</b><span>choose which to compare, or edit one</span></a>[m
+[32m+[m[32m    <a href="#" data-goto="add" class="shortcut"><b>Add laptop →</b><span>fill in a form{% if not server_mode %} (app mode){% endif %}</span></a>[m
+[32m+[m[32m  </div>[m
+[32m+[m
+[32m+[m[32m  <h2 id="summary">Summary</h2>[m
+[32m+[m[32m  <div id="issues"></div>[m
+[32m+[m[32m  <h3>Best laptop for each spec <span class="muted">(among the laptops you selected)</span></h3>[m
+[32m+[m[32m  <div class="scroll"><table id="best"></table></div>[m
+ [m
+[31m-<h2 id="values">Spec values</h2>[m
+[31m-<div class="scroll"><table id="values-table"></table></div>[m
+[32m+[m[32m  <h2 id="comparison">Comparison vs <span class="basename"></span></h2>[m
+[32m+[m[32m  <p class="legend muted">[m
+[32m+[m[32m    <span style="background:var(--better);color:var(--better-t)">better than base</span>[m
+[32m+[m[32m    <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>[m
+[32m+[m[32m    <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>[m
+[32m+[m[32m    % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.[m
+[32m+[m[32m  </p>[m
+[32m+[m[32m  <div class="scroll"><table id="comp"></table></div>[m
+ [m
+[31m-<h2 id="overview">Overview</h2>[m
+[31m-<p class="muted">Each spec scored 0–100 among the selected laptops (100 = best for that spec, 0 = worst). Grey = no data.</p>[m
+[31m-<div class="scroll"><table id="heat"></table></div>[m
+[32m+[m[32m  <h2 id="values">Spec values</h2>[m
+[32m+[m[32m  <div class="scroll"><table id="values-table"></table></div>[m
+ [m
+[31m-<h2 id="specs-charts">Per spec</h2>[m
+[31m-<p class="muted">Selected laptops sorted from low to high: price from cheap to expensive, CPU from low tier to high…[m
+[31m-  The base is orange. Hover over a point or bar to see its value.</p>[m
+[31m-<div class="grid" id="spec-charts"></div>[m
+[32m+[m[32m  <h2 id="overview">Overview</h2>[m
+[32m+[m[32m  <p class="muted">Each spec scored 0–100 among the selected laptops (100 = best for that spec, 0 = worst). Grey = no data.</p>[m
+[32m+[m[32m  <div class="scroll"><table id="heat"></table></div>[m
+[32m+[m[32m</main></section>[m
+[32m+[m
+[32m+[m[32m<!-- ================================================================== PER SPEC -->[m
+[32m+[m[32m<section class="tab" id="tab-perspec"><main>[m
+[32m+[m[32m  <h2>Per spec</h2>[m
+[32m+[m[32m  <p class="muted">Selected laptops sorted from low to high: price from cheap to expensive, CPU from low tier to high…[m
+[32m+[m[32m    The base is orange. Hover over a point or bar to see its value. Choose specs in the <a href="#" data-goto="specs">Specs</a> tab.</p>[m
+[32m+[m[32m  <div class="grid" id="spec-charts"></div>[m
+[32m+[m[32m</main></section>[m
+ [m
+[31m-<h2 id="laptops-cards">Per laptop</h2>[m
+[31m-<p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the laptop (blue) against the base (orange).</p>[m
+[31m-<div id="laptop-cards"></div>[m
+[31m-</main>[m
+[31m-</section>[m
+[32m+[m[32m<!-- ================================================================== PER LAPTOP -->[m
+[32m+[m[32m<section class="tab" id="tab-perlaptop"><main>[m
+[32m+[m[32m  <h2>Per laptop</h2>[m
+[32m+[m[32m  <p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the laptop (blue) against the base (orange).</p>[m
+[32m+[m[32m  <div class="tools"><label for="jump-laptop" class="muted">Jump to:</label> <select id="jump-laptop" class="btn"></select></div>[m
+[32m+[m[32m  <div id="laptop-cards"></div>[m
+[32m+[m[32m</main></section>[m
+ [m
+ <!-- ================================================================== LAPTOPS -->[m
+ <section class="tab" id="tab-laptops"><main>[m
+[31m-  <h2>Which laptops to compare</h2>[m
+[32m+[m[32m  <h2>Laptops</h2>[m
+   <p class="muted">Untick laptops to take them out of every table and chart (handy when the list grows, or when you are down to a few[m
+[31m-    finalists). Click a row to toggle it.</p>[m
+[32m+[m[32m    finalists). Click a row to toggle it. Use <b>Edit</b> to correct a laptop's specs.</p>[m
+   <div class="tools">[m
+     <button class="btn" data-laptops="all">Select all</button>[m
+     <button class="btn" data-laptops="none">Select none</button>[m
+[36m@@ -185,15 +238,16 @@[m
+   <p class="muted save-note"></p>[m
+ </main></section>[m
+ [m
+[31m-<!-- ================================================================== ADD -->[m
+[32m+[m[32m<!-- ================================================================== ADD / EDIT -->[m
+ <section class="tab" id="tab-add"><main>[m
+[31m-  <h2>Add a laptop</h2>[m
+[32m+[m[32m  <h2 id="add-title">Add a laptop</h2>[m
+[32m+[m[32m  <div id="edit-banner" class="alerts info" style="display:none"></div>[m
+   {% if server_mode %}[m
+[31m-  <p class="muted">Fill in what you know (only the name is required) and press <b>Add laptop</b>. It is added at the end of[m
+[32m+[m[32m  <p class="muted" id="add-help">Fill in what you know (only the name is required) and press <b>Add laptop</b>. It is added at the end of[m
+     <code>data/laptops.csv</code>. If you type a CPU (or another ranked value) that isn't known yet, extra boxes appear to rank it,[m
+     and it is added to its rank file too.</p>[m
+   {% else %}[m
+[31m-  <div class="alerts info"><b>To add laptops from here, open the report in app mode:</b> double-click <code>run_app.bat</code>[m
+[32m+[m[32m  <div class="alerts info"><b>To add or edit laptops from here, open the report in app mode:</b> double-click <code>run_app.bat</code>[m
+     (or run <code>laptop-compare --serve</code>). This file is a static copy and can't change your CSV files.<br>[m
+     You can still fill in the form and press <b>Copy CSV row</b> to paste the line into <code>data/laptops.csv</code> yourself.</div>[m
+   {% endif %}[m
+[36m@@ -250,6 +304,7 @@[m [mconst state = {[m
+   laptops: new Set(DATA.laptops.filter((n) => !DATA.selection.laptops_off.includes(n))),[m
+   specs: new Set(DATA.columns.filter((s) => !DATA.selection.specs_off.includes(s))),[m
+   base: DATA.defaultBase,[m
+[32m+[m[32m  editing: null,          // name of the laptop being edited in the form (null = adding a new one)[m
+ };[m
+ if (state.laptops.size === 0) DATA.laptops.forEach((n) => state.laptops.add(n));[m
+ const activeLaptops = () => DATA.laptops.filter((n) => state.laptops.has(n));[m
+[36m@@ -292,6 +347,29 @@[m [mfunction renderBaseSelect() {[m
+   $("#sel-summary").textContent = (off || offS) ? `Showing ${laptops.length}/${DATA.laptops.length} laptops, ${activeColumns().length}/${DATA.columns.length} specs` : "";[m
+   $("#count-laptops").textContent = `(${laptops.length}/${DATA.laptops.length})`;[m
+   $("#count-specs").textContent = `(${activeColumns().length}/${DATA.columns.length})`;[m
+[32m+[m[32m  $("#tile-laptops").textContent = `${laptops.length}/${DATA.laptops.length}`;[m
+[32m+[m[32m  $("#tile-specs").textContent = `${activeCompared().length}/${DATA.compared.length}`;[m
+[32m+[m[32m  $("#tile-issues").textContent = DATA.issues.length;[m
+[32m+[m[32m  $("#tile-issues-box").className = "tile " + (DATA.issues.length ? "bad" : "ok");[m
+[32m+[m[32m  const cpuCol = DATA.columns.find((c) => /cpu/i.test(c));[m
+[32m+[m[32m  $("#hero-sub").textContent = [cpuCol && DATA.values[state.base][cpuCol], DATA.values[state.base][DATA.columns[0]]][m
+[32m+[m[32m    .filter(Boolean).join(" · ");[m
+[32m+[m[32m}[m
+[32m+[m[32mfunction renderHighlights(g) {[m
+[32m+[m[32m  // up to 4 specs that have a single clear winner among the selected laptops, in column order[m
+[32m+[m[32m  const laptops = activeLaptops(), cards = [];[m
+[32m+[m[32m  for (const s of Object.keys(g)) {[m
+[32m+[m[32m    const vals = laptops.filter((n) => g[s][n] !== null);[m
+[32m+[m[32m    if (vals.length < 2) continue;[m
+[32m+[m[32m    const top = Math.max(...vals.map((n) => g[s][n])), winners = vals.filter((n) => g[s][n] === top);[m
+[32m+[m[32m    if (winners.length !== 1) continue;[m
+[32m+[m[32m    const w = winners[0], cell = DATA.comp[state.base][w][s];[m
+[32m+[m[32m    const vs = w === state.base ? "this is the base" : `${cell[0]} vs base`;[m
+[32m+[m[32m    cards.push(`<div class="hl"><div class="k">Best ${esc(s)}</div><div class="v">${esc(w)}</div>[m
+[32m+[m[32m      <div class="d">${esc(DATA.values[w][s])} · <span style="color:${cell[1] > 0 ? "var(--good)" : "#555"}">${esc(vs)}</span></div></div>`);[m
+[32m+[m[32m    if (cards.length === 4) break;[m
+[32m+[m[32m  }[m
+[32m+[m[32m  $("#highlights").innerHTML = cards.join("");[m
+ }[m
+ function renderBest(g) {[m
+   const laptops = activeLaptops();[m
+[36m@@ -474,6 +552,7 @@[m [mfunction renderLaptops(g) {[m
+   for (const n of activeLaptops()) {[m
+     const div = document.createElement("div");[m
+     div.className = "laptop" + (n === base ? " isbase" : "");[m
+[32m+[m[32m    div.id = "card-" + DATA.laptops.indexOf(n);[m
+     const facts = DATA.facts[n].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");[m
+     div.innerHTML = `<h3>${esc(n)}${n === base ? " (base)" : ""}</h3>[m
+       <details><summary class="muted">Specs and notes</summary><dl>${facts}</dl></details>[m
+[36m@@ -482,17 +561,20 @@[m [mfunction renderLaptops(g) {[m
+     div.querySelector(".radar").appendChild(radar(n, base, g));[m
+     box.appendChild(div);[m
+   }[m
+[32m+[m[32m  $("#jump-laptop").innerHTML = activeLaptops().map((n) => `<option value="card-${DATA.laptops.indexOf(n)}">${esc(n)}</option>`).join("");[m
+ }[m
+[32m+[m[32m$("#jump-laptop").addEventListener("change", (e) => document.getElementById(e.target.value)?.scrollIntoView({ behavior: "smooth", block: "start" }));[m
+ function renderReport() {[m
+   renderBaseSelect();[m
+   const g = goodness(activeLaptops());[m
+[31m-  renderBest(g); renderComparison(); renderValues(); renderHeat(g); renderSpecCharts(); renderLaptops(g);[m
+[32m+[m[32m  renderHighlights(g); renderBest(g); renderComparison(); renderValues(); renderHeat(g); renderSpecCharts(); renderLaptops(g);[m
+   updateHash();[m
+ }[m
+[31m-let currentTab = "report";[m
+[32m+[m[32mlet currentTab = "home";[m
+ function updateHash() {[m
+   const h = new URLSearchParams({ base: state.base });[m
+[31m-  if (currentTab !== "report") h.set("tab", currentTab);[m
+[32m+[m[32m  if (currentTab !== "home") h.set("tab", currentTab);[m
+[32m+[m[32m  if (currentTab === "add" && state.editing) h.set("edit", state.editing);[m
+   history.replaceState(null, "", "#" + h.toString());[m
+ }[m
+ [m
+[36m@@ -500,18 +582,21 @@[m [mfunction updateHash() {[m
+ function renderLaptopPicker() {[m
+   const cols = DATA.columns.slice(0, 4);[m
+   const filter = $("#laptop-filter").value.toLowerCase();[m
+[31m-  let html = `<tr><th></th><th>${esc(DATA.nameColumn)}</th>` + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "</tr>";[m
+[32m+[m[32m  let html = `<tr><th></th><th>${esc(DATA.nameColumn)}</th>` + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "<th></th></tr>";[m
+   for (const n of DATA.laptops) {[m
+     const text = (n + " " + cols.map((c) => DATA.values[n][c]).join(" ")).toLowerCase();[m
+     if (filter && !text.includes(filter)) continue;[m
+     const on = state.laptops.has(n);[m
+     html += `<tr class="${on ? "" : "off"}" data-name="${esc(n)}"><td><input type="checkbox" ${on ? "checked" : ""}></td><td>${esc(n)}${n === state.base ? ' <span class="tag">base</span>' : ""}</td>` +[m
+[31m-      cols.map((c) => `<td>${esc(DATA.values[n][c])}</td>`).join("") + "</tr>";[m
+[32m+[m[32m      cols.map((c) => `<td>${esc(DATA.values[n][c])}</td>`).join("") +[m
+[32m+[m[32m      `<td class="act"><button class="btn small" data-edit="${esc(n)}" title="Correct this laptop's specs">✎ Edit</button></td></tr>`;[m
+   }[m
+   $("#pick-laptops").innerHTML = html;[m
+   $("#laptop-count").textContent = `${state.laptops.size} of ${DATA.laptops.length} selected`;[m
+ }[m
+ $("#pick-laptops").addEventListener("click", (e) => {[m
+[32m+[m[32m  const edit = e.target.closest("[data-edit]");[m
+[32m+[m[32m  if (edit) { startEdit(edit.dataset.edit); return; }[m
+   const tr = e.target.closest("tr[data-name]"); if (!tr) return;[m
+   const n = tr.dataset.name;[m
+   if (state.laptops.has(n)) { if (state.laptops.size === 1) { toast("Keep at least one laptop selected."); renderLaptopPicker(); return; } state.laptops.delete(n); }[m
+[36m@@ -625,7 +710,8 @@[m [m$("#add-form").addEventListener("submit", async (e) => {[m
+   const { values, ranks } = readForm();[m
+   const box = $("#add-result");[m
+   try {[m
+[31m-    const res = await api("api/laptops", { values, ranks });[m
+[32m+[m[32m    const res = state.editing ? await api("api/laptops/update", { original: state.editing, values, ranks })[m
+[32m+[m[32m                              : await api("api/laptops", { values, ranks });[m
+     box.innerHTML = `<div class="alerts ok"><b>Done.</b><ul>${res.messages.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>Reloading…</div>`;[m
+     setTimeout(() => location.reload(), 1800);[m
+   } catch (err) {[m
+[36m@@ -641,14 +727,57 @@[m [mdocument.addEventListener("click", (e) => {[m
+   navigator.clipboard?.writeText(line).then(() => toast("CSV row copied to the clipboard."), () => {});[m
+ });[m
+ [m
+[32m+[m[32m// ================================================================== edit mode[m
+[32m+[m[32mfunction setFormMode(name) {[m
+[32m+[m[32m  state.editing = name;[m
+[32m+[m[32m  const submit = $('#add-form button[type="submit"]');[m
+[32m+[m[32m  $("#add-title").textContent = name ? "Edit laptop" : "Add a laptop";[m
+[32m+[m[32m  $("#add-tab-btn").textContent = name ? "Edit laptop" : "Add laptop";[m
+[32m+[m[32m  if (submit) submit.textContent = name ? "Save changes" : "Add laptop";[m
+[32m+[m[32m  const help = $("#add-help"); if (help) help.style.display = name ? "none" : "";[m
+[32m+[m[32m  const banner = $("#edit-banner");[m
+[32m+[m[32m  banner.style.display = name ? "block" : "none";[m
+[32m+[m[32m  banner.innerHTML = name ? `Editing <b>${esc(name)}</b>. Change what was wrong and press <b>Save changes</b>; its row in[m
+[32m+[m[32m    <code>data/laptops.csv</code> is replaced (you can also rename it). <button type="button" class="btn small" id="cancel-edit">Cancel</button>` : "";[m
+[32m+[m[32m  $("#add-result").innerHTML = "";[m
+[32m+[m[32m}[m
+[32m+[m[32mfunction startEdit(name) {[m
+[32m+[m[32m  const f = $("#add-form");[m
+[32m+[m[32m  state.editing = null;   // so the reset below doesn't schedule leaving edit mode[m
+[32m+[m[32m  f.reset();[m
+[32m+[m[32m  f.querySelector("#f-name").value = name;[m
+[32m+[m[32m  for (const c of DATA.columns) {[m
+[32m+[m[32m    const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);[m
+[32m+[m[32m    if (inp) { inp.value = DATA.raw[name][c] ?? ""; inp.dispatchEvent(new Event("input")); }[m
+[32m+[m[32m  }[m
+[32m+[m[32m  setFormMode(name);[m
+[32m+[m[32m  showTab("add");[m
+[32m+[m[32m}[m
+[32m+[m[32mdocument.addEventListener("click", (e) => {[m
+[32m+[m[32m  if (e.target.id === "cancel-edit") { $("#add-form").reset(); setFormMode(null); showTab("laptops"); }[m
+[32m+[m[32m});[m
+[32m+[m[32m$("#add-form").addEventListener("reset", () => { if (state.editing) setTimeout(() => setFormMode(null), 0); });[m
+[32m+[m
+ // ================================================================== tabs & wiring[m
+ function showTab(name) {[m
+   $$(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));[m
+   $$("section.tab").forEach((s) => s.classList.toggle("active", s.id === "tab-" + name));[m
+   currentTab = name; updateHash();[m
+[32m+[m[32m  $("#base-bar").classList.toggle("hidden", !["home", "perspec", "perlaptop"].includes(name));[m
+[32m+[m[32m  $("#home-nav").style.display = name === "home" ? "" : "none";[m
+[32m+[m[32m  if (name === "add" && !state.editing) setFormMode(null);[m
+   window.scrollTo({ top: 0 });[m
+ }[m
+[31m-$$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));[m
+[32m+[m[32mdocument.addEventListener("click", (e) => {[m
+[32m+[m[32m  const go = e.target.closest("[data-goto]");[m
+[32m+[m[32m  if (go) { e.preventDefault(); if (go.dataset.goto === "add") { $("#add-form").reset(); setFormMode(null); } showTab(go.dataset.goto); return; }[m
+[32m+[m[32m  const jump = e.target.closest("[data-jump]");[m
+[32m+[m[32m  if (jump) { e.preventDefault(); document.getElementById(jump.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }); }[m
+[32m+[m[32m});[m
+[32m+[m[32m$$(".tabs button").forEach((b) => b.addEventListener("click", () => {[m
+[32m+[m[32m  if (b.dataset.tab === "add" && state.editing && currentTab !== "add") { $("#add-form").reset(); setFormMode(null); }[m
+[32m+[m[32m  showTab(b.dataset.tab);[m
+[32m+[m[32m}));[m
+ $("#base").addEventListener("change", (e) => { state.base = e.target.value; changed(); });[m
+ function changed() { renderReport(); renderLaptopPicker(); renderSpecPicker(); }[m
+ [m
+[36m@@ -656,7 +785,8 @@[m [mconst params = new URLSearchParams(location.hash.slice(1));[m
+ const fromHash = params.get("base");[m
+ if (fromHash && DATA.laptops.includes(fromHash)) { state.base = fromHash; state.laptops.add(fromHash); }[m
+ renderIssues(); renderAddForm(); changed();[m
+[31m-if (["laptops", "specs", "add"].includes(params.get("tab"))) showTab(params.get("tab"));[m
+[32m+[m[32mshowTab(["perspec", "perlaptop", "laptops", "specs", "add"].includes(params.get("tab")) ? params.get("tab") : "home");[m
+[32m+[m[32mif (DATA.laptops.includes(params.get("edit"))) startEdit(params.get("edit"));[m
+ </script>[m
+ </body>[m
+ </html>[m
+[1mdiff --git a/tests/test_compare.py b/tests/test_compare.py[m
+[1mindex 234f097..47344a4 100644[m
+[1m--- a/tests/test_compare.py[m
+[1m+++ b/tests/test_compare.py[m
+[36m@@ -177,3 +177,29 @@[m [mdef test_unranked_value_without_rank_is_reported_after_adding(tmp_data):[m
+ [m
+     msgs = add_laptop(tmp_data, {"Laptop": "Y", "CPU": "Apple M4"})[m
+     assert any("Still to do" in m and "Apple M4" in m for m in msgs)[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef test_edit_laptop_replaces_only_its_row(tmp_data):[m
+[32m+[m[32m    from laptop_compare.data import load_selection, save_selection[m
+[32m+[m[32m    from laptop_compare.editing import update_laptop[m
+[32m+[m
+[32m+[m[32m    save_selection(tmp_data, {"laptops_off": ["LG gram 14 (14Z90T)"], "specs_off": []})[m
+[32m+[m[32m    before = load_dataset(tmp_data)[m
+[32m+[m[32m    values = {c: before.raw.at["LG gram 14 (14Z90T)", c] for c in before.laptops.columns}[m
+[32m+[m[32m    values.update({"Laptop": "LG gram 14 2025", "Price (€)": "1.199,00"})[m
+[32m+[m[32m    msgs = update_laptop(tmp_data, "LG gram 14 (14Z90T)", values)[m
+[32m+[m[32m    assert any("Renamed" in m for m in msgs)[m
+[32m+[m[32m    after = load_dataset(tmp_data)[m
+[32m+[m[32m    assert after.names.index("LG gram 14 2025") == before.names.index("LG gram 14 (14Z90T)")   # same position[m
+[32m+[m[32m    assert after.laptops.at["LG gram 14 2025", "Price (€)"] == 1199[m
+[32m+[m[32m    assert len(after.names) == len(before.names)[m
+[32m+[m[32m    assert load_selection(tmp_data)["laptops_off"] == ["LG gram 14 2025"]                      # selection follows the rename[m
+[32m+[m[32m    other = "Acer Aspire 14 AI (A14-53M)"[m
+[32m+[m[32m    assert after.raw.loc[other].tolist() == before.raw.loc[other].tolist()                    # other rows untouched[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef test_edit_refuses_taking_another_laptops_name(tmp_data):[m
+[32m+[m[32m    from laptop_compare.editing import AddLaptopError, update_laptop[m
+[32m+[m
+[32m+[m[32m    with pytest.raises(AddLaptopError, match="already"):[m
+[32m+[m[32m        update_laptop(tmp_data, "LG gram 14 (14Z90T)", {"Laptop": BASE})[m

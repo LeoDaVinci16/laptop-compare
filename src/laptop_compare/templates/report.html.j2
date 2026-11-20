@@ -95,6 +95,29 @@
   pre.row { background:#f6f8fa; border:1px solid var(--line); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
   #toast { position: fixed; right: 20px; bottom: 20px; max-width: 520px; padding: 12px 16px; border-radius: 8px; color:#fff;
            background:#1f2937; box-shadow: 0 6px 24px rgba(0,0,0,.2); display:none; z-index: 50; font-size: 13.5px; white-space: pre-line; }
+  .tab-sep { width: 1px; background: #475569; margin: 8px 10px; }
+  .bar.hidden { display:none; }
+  .hero { display:flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; margin: 22px 0 14px;
+          background:#fff; border:1px solid var(--line); border-left: 6px solid var(--base); border-radius: 12px; padding: 18px 22px; }
+  .hero-base { font-size: 24px; font-weight: 700; margin: 2px 0; }
+  .tiles { display:flex; gap: 12px; flex-wrap: wrap; }
+  .tile { background:#f6f8fb; border-radius: 10px; padding: 10px 16px; min-width: 120px; text-align:center; }
+  .tile b { display:block; font-size: 24px; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .tile.bad { background: var(--miss); color: var(--miss-t); }
+  .tile.ok { background: var(--better); color: var(--better-t); }
+  .highlights { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 6px 0 14px; }
+  .hl { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .hl .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .hl .v { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
+  .hl .d { font-size: 12.5px; color:#374151; }
+  .shortcuts { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .shortcut { display:block; text-decoration:none; color:inherit; background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .shortcut:hover { border-color: var(--other); box-shadow: 0 2px 10px rgba(76,114,176,.12); }
+  .shortcut b { display:block; color: var(--other); margin-bottom: 2px; }
+  .shortcut span { font-size: 12.5px; color: var(--muted); }
+  table.pick td.act { width: 70px; text-align:right; }
+  .btn.small { padding: 3px 10px; font-size: 12px; }
   @media (max-width: 900px) { .laptop .cols { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -103,59 +126,96 @@
   <h1>Laptop comparison</h1>
   <p>generated {{ generated }} · data: {{ data_dir }}{% if server_mode %} · <strong>app mode</strong> (you can edit the data){% endif %}</p>
   <div class="tabs">
-    <button data-tab="report" class="active">Report</button>
+    <button data-tab="home" class="active">Home</button>
+    <button data-tab="perspec">Per spec</button>
+    <button data-tab="perlaptop">Per laptop</button>
+    <span class="tab-sep"></span>
     <button data-tab="laptops">Laptops <span class="count" id="count-laptops"></span></button>
     <button data-tab="specs">Specs <span class="count" id="count-specs"></span></button>
-    <button data-tab="add">Add laptop</button>
+    <button data-tab="add" id="add-tab-btn">Add laptop</button>
   </div>
 </header>
 
-<!-- ================================================================== REPORT -->
-<section class="tab active" id="tab-report">
-<div class="bar">
+<!-- base selector: shown on Home, Per spec and Per laptop -->
+<div class="bar" id="base-bar">
   <div><label for="base">Base laptop:</label> <select id="base"></select></div>
-  <nav><a href="#summary">Summary</a><a href="#comparison">Comparison</a><a href="#values">Values</a>
-    <a href="#overview">Overview</a><a href="#specs-charts">Per spec</a><a href="#laptops-cards">Per laptop</a></nav>
+  <nav id="home-nav"><a href="#" data-jump="summary">Summary</a><a href="#" data-jump="comparison">Comparison</a>
+    <a href="#" data-jump="values">Values</a><a href="#" data-jump="overview">Overview</a></nav>
   <span class="muted" id="sel-summary"></span>
 </div>
-<main>
-<h2 id="summary">Summary</h2>
-<div id="issues"></div>
-<h3>Best laptop for each spec <span class="muted">(among the laptops you selected)</span></h3>
-<div class="scroll"><table id="best"></table></div>
 
-<h2 id="comparison">Comparison vs <span class="basename"></span></h2>
-<p class="legend muted">
-  <span style="background:var(--better);color:var(--better-t)">better than base</span>
-  <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>
-  <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>
-  % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.
-</p>
-<div class="scroll"><table id="comp"></table></div>
+<!-- ================================================================== HOME -->
+<section class="tab active" id="tab-home"><main>
+  <div class="hero">
+    <div>
+      <div class="muted">Comparing against</div>
+      <div class="hero-base basename"></div>
+      <div class="muted" id="hero-sub"></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><b id="tile-laptops"></b><span>laptops selected</span></div>
+      <div class="tile"><b id="tile-specs"></b><span>specs compared</span></div>
+      <div class="tile" id="tile-issues-box"><b id="tile-issues"></b><span>data issues</span></div>
+    </div>
+  </div>
+  <div class="highlights" id="highlights"></div>
+  <div class="shortcuts">
+    <a href="#" data-goto="perspec" class="shortcut"><b>Per spec →</b><span>every laptop sorted low → high for each spec</span></a>
+    <a href="#" data-goto="perlaptop" class="shortcut"><b>Per laptop →</b><span>each laptop vs the base, with radar charts</span></a>
+    <a href="#" data-goto="laptops" class="shortcut"><b>Laptops →</b><span>choose which to compare, or edit one</span></a>
+    <a href="#" data-goto="add" class="shortcut"><b>Add laptop →</b><span>fill in a form{% if not server_mode %} (app mode){% endif %}</span></a>
+  </div>
 
-<h2 id="values">Spec values</h2>
-<div class="scroll"><table id="values-table"></table></div>
+  <h2 id="summary">Summary</h2>
+  <div id="issues"></div>
+  <h3>Best laptop for each spec <span class="muted">(among the laptops you selected)</span></h3>
+  <div class="scroll"><table id="best"></table></div>
 
-<h2 id="overview">Overview</h2>
-<p class="muted">Each spec scored 0–100 among the selected laptops (100 = best for that spec, 0 = worst). Grey = no data.</p>
-<div class="scroll"><table id="heat"></table></div>
+  <h2 id="comparison">Comparison vs <span class="basename"></span></h2>
+  <p class="legend muted">
+    <span style="background:var(--better);color:var(--better-t)">better than base</span>
+    <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>
+    <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>
+    % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.
+  </p>
+  <div class="scroll"><table id="comp"></table></div>
 
-<h2 id="specs-charts">Per spec</h2>
-<p class="muted">Selected laptops sorted from low to high: price from cheap to expensive, CPU from low tier to high…
-  The base is orange. Hover over a point or bar to see its value.</p>
-<div class="grid" id="spec-charts"></div>
+  <h2 id="values">Spec values</h2>
+  <div class="scroll"><table id="values-table"></table></div>
 
-<h2 id="laptops-cards">Per laptop</h2>
-<p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the laptop (blue) against the base (orange).</p>
-<div id="laptop-cards"></div>
-</main>
-</section>
+  <h2 id="overview">Overview</h2>
+  <p class="muted">Each spec scored 0–100 among the selected laptops (100 = best for that spec, 0 = worst). Grey = no data.</p>
+  <div class="scroll"><table id="heat"></table></div>
+</main></section>
+
+<!-- ================================================================== PER SPEC -->
+<section class="tab" id="tab-perspec"><main>
+  <h2>Per spec</h2>
+  <p class="muted">By default each chart is sorted by its own values (price from cheap to expensive, CPU from low tier to high…).
+    Pick a spec in <b>Sort laptops by</b> to use the same laptop order in every chart. The base is orange; hover over a point or
+    bar to see its value. Choose specs in the <a href="#" data-goto="specs">Specs</a> tab.</p>
+  <div class="tools">
+    <label for="sort-by"><b>Sort laptops by:</b></label>
+    <select id="sort-by" class="btn"></select>
+    <button class="btn" id="sort-dir" title="Reverse the order">↑ low → high</button>
+    <span class="muted" id="sort-hint"></span>
+  </div>
+  <div class="grid" id="spec-charts"></div>
+</main></section>
+
+<!-- ================================================================== PER LAPTOP -->
+<section class="tab" id="tab-perlaptop"><main>
+  <h2>Per laptop</h2>
+  <p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the laptop (blue) against the base (orange).</p>
+  <div class="tools"><label for="jump-laptop" class="muted">Jump to:</label> <select id="jump-laptop" class="btn"></select></div>
+  <div id="laptop-cards"></div>
+</main></section>
 
 <!-- ================================================================== LAPTOPS -->
 <section class="tab" id="tab-laptops"><main>
-  <h2>Which laptops to compare</h2>
+  <h2>Laptops</h2>
   <p class="muted">Untick laptops to take them out of every table and chart (handy when the list grows, or when you are down to a few
-    finalists). Click a row to toggle it.</p>
+    finalists). Click a row to toggle it. Use <b>Edit</b> to correct a laptop's specs.</p>
   <div class="tools">
     <button class="btn" data-laptops="all">Select all</button>
     <button class="btn" data-laptops="none">Select none</button>
@@ -185,15 +245,16 @@
   <p class="muted save-note"></p>
 </main></section>
 
-<!-- ================================================================== ADD -->
+<!-- ================================================================== ADD / EDIT -->
 <section class="tab" id="tab-add"><main>
-  <h2>Add a laptop</h2>
+  <h2 id="add-title">Add a laptop</h2>
+  <div id="edit-banner" class="alerts info" style="display:none"></div>
   {% if server_mode %}
-  <p class="muted">Fill in what you know (only the name is required) and press <b>Add laptop</b>. It is added at the end of
+  <p class="muted" id="add-help">Fill in what you know (only the name is required) and press <b>Add laptop</b>. It is added at the end of
     <code>data/laptops.csv</code>. If you type a CPU (or another ranked value) that isn't known yet, extra boxes appear to rank it,
     and it is added to its rank file too.</p>
   {% else %}
-  <div class="alerts info"><b>To add laptops from here, open the report in app mode:</b> double-click <code>run_app.bat</code>
+  <div class="alerts info"><b>To add or edit laptops from here, open the report in app mode:</b> double-click <code>run_app.bat</code>
     (or run <code>laptop-compare --serve</code>). This file is a static copy and can't change your CSV files.<br>
     You can still fill in the form and press <b>Copy CSV row</b> to paste the line into <code>data/laptops.csv</code> yourself.</div>
   {% endif %}
@@ -250,6 +311,9 @@ const state = {
   laptops: new Set(DATA.laptops.filter((n) => !DATA.selection.laptops_off.includes(n))),
   specs: new Set(DATA.columns.filter((s) => !DATA.selection.specs_off.includes(s))),
   base: DATA.defaultBase,
+  editing: null,          // name of the laptop loaded in the form with Edit (null = empty form)
+  sortBy: "own",          // Per spec order: "own" (each chart by its values), "name", "file", or a spec name
+  sortDir: 1,             // 1 = low → high, -1 = high → low
 };
 if (state.laptops.size === 0) DATA.laptops.forEach((n) => state.laptops.add(n));
 const activeLaptops = () => DATA.laptops.filter((n) => state.laptops.has(n));
@@ -292,6 +356,29 @@ function renderBaseSelect() {
   $("#sel-summary").textContent = (off || offS) ? `Showing ${laptops.length}/${DATA.laptops.length} laptops, ${activeColumns().length}/${DATA.columns.length} specs` : "";
   $("#count-laptops").textContent = `(${laptops.length}/${DATA.laptops.length})`;
   $("#count-specs").textContent = `(${activeColumns().length}/${DATA.columns.length})`;
+  $("#tile-laptops").textContent = `${laptops.length}/${DATA.laptops.length}`;
+  $("#tile-specs").textContent = `${activeCompared().length}/${DATA.compared.length}`;
+  $("#tile-issues").textContent = DATA.issues.length;
+  $("#tile-issues-box").className = "tile " + (DATA.issues.length ? "bad" : "ok");
+  const cpuCol = DATA.columns.find((c) => /cpu/i.test(c));
+  $("#hero-sub").textContent = [cpuCol && DATA.values[state.base][cpuCol], DATA.values[state.base][DATA.columns[0]]]
+    .filter(Boolean).join(" · ");
+}
+function renderHighlights(g) {
+  // up to 4 specs that have a single clear winner among the selected laptops, in column order
+  const laptops = activeLaptops(), cards = [];
+  for (const s of Object.keys(g)) {
+    const vals = laptops.filter((n) => g[s][n] !== null);
+    if (vals.length < 2) continue;
+    const top = Math.max(...vals.map((n) => g[s][n])), winners = vals.filter((n) => g[s][n] === top);
+    if (winners.length !== 1) continue;
+    const w = winners[0], cell = DATA.comp[state.base][w][s];
+    const vs = w === state.base ? "this is the base" : `${cell[0]} vs base`;
+    cards.push(`<div class="hl"><div class="k">Best ${esc(s)}</div><div class="v">${esc(w)}</div>
+      <div class="d">${esc(DATA.values[w][s])} · <span style="color:${cell[1] > 0 ? "var(--good)" : "#555"}">${esc(vs)}</span></div></div>`);
+    if (cards.length === 4) break;
+  }
+  $("#highlights").innerHTML = cards.join("");
 }
 function renderBest(g) {
   const laptops = activeLaptops();
@@ -351,9 +438,24 @@ function renderHeat(g) {
   }
   $("#heat").innerHTML = html;
 }
+// one order for every chart: by the chosen spec / name / file order (laptops without a value go last)
+function globalOrder(laptops) {
+  const dir = state.sortDir, key = state.sortBy;
+  if (key === "file") return dir > 0 ? [...laptops] : [...laptops].reverse();
+  if (key === "name") return [...laptops].sort((a, b) => dir * a.localeCompare(b));
+  const q = DATA.quantity[key] || {};
+  return [...laptops].sort((a, b) => {
+    const qa = q[a], qb = q[b];
+    if (qa === null || qa === undefined) return (qb === null || qb === undefined) ? 0 : 1;
+    if (qb === null || qb === undefined) return -1;
+    return dir * (qa - qb) || DATA.laptops.indexOf(a) - DATA.laptops.indexOf(b);
+  });
+}
 function specChart(spec, base, laptops) {
   const q = DATA.quantity[spec.name];
-  const names = laptops.filter((n) => q[n] !== null).sort((a, b) => q[a] - q[b]);
+  const names = state.sortBy === "own"
+    ? laptops.filter((n) => q[n] !== null).sort((a, b) => state.sortDir * (q[a] - q[b]))
+    : globalOrder(laptops).filter((n) => q[n] !== null);
   const missing = laptops.filter((n) => q[n] === null);
   const W = 640, H = 360, L = spec.ranked && !spec.usesScore ? 110 : 84, R = 16, T = 34, B = 104;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%" });
@@ -413,12 +515,31 @@ function specChart(spec, base, laptops) {
   });
   const card = document.createElement("div"); card.className = "card";
   const hint = spec.compare === "lower" ? "lower is better" : spec.ranked && !spec.usesScore ? "taller = better rank" : "higher is better";
-  card.innerHTML = `<h4>${esc(spec.name)} <span class="muted">· sorted low → high (${hint})</span></h4>`;
+  const arrow = state.sortDir > 0 ? "low → high" : "high → low";
+  const order = state.sortBy === "own" ? `sorted ${arrow}` : state.sortBy === "name" ? "sorted by name"
+              : state.sortBy === "file" ? "in laptops.csv order" : `sorted by ${state.sortBy} (${arrow})`;
+  card.innerHTML = `<h4>${esc(spec.name)} <span class="muted">· ${esc(order)} · ${hint}</span></h4>`;
   card.appendChild(svg);
   if (missing.length) card.insertAdjacentHTML("beforeend", `<div class="muted">No data: ${esc(missing.join(", "))}</div>`);
   return card;
 }
+function renderSortControls() {
+  const sel = $("#sort-by"), specs = activeCharted().map((s) => s.name);
+  if (state.sortBy !== "own" && state.sortBy !== "name" && state.sortBy !== "file" && !specs.includes(state.sortBy)) state.sortBy = "own";
+  sel.innerHTML = [["own", "Each chart by its own values"], ["name", "Laptop name"], ["file", "Order in laptops.csv"]]
+    .map(([v, t]) => `<option value="${v}">${t}</option>`).join("") +
+    `<optgroup label="One spec for every chart">` + specs.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("") + "</optgroup>";
+  sel.value = state.sortBy;
+  $("#sort-dir").textContent = state.sortBy === "name" ? (state.sortDir > 0 ? "↑ A → Z" : "↓ Z → A")
+                             : state.sortBy === "file" ? (state.sortDir > 0 ? "↑ first → last" : "↓ last → first")
+                             : (state.sortDir > 0 ? "↑ low → high" : "↓ high → low");
+  $("#sort-hint").textContent = state.sortBy === "own" ? "Each chart is sorted by its own spec."
+    : "Same laptop order in every chart, so you can follow one laptop across them.";
+}
+$("#sort-by").addEventListener("change", (e) => { state.sortBy = e.target.value; renderSortControls(); renderSpecCharts(); });
+$("#sort-dir").addEventListener("click", () => { state.sortDir *= -1; renderSortControls(); renderSpecCharts(); });
 function renderSpecCharts() {
+  renderSortControls();
   const box = $("#spec-charts"); box.innerHTML = "";
   for (const s of activeCharted()) { const c = specChart(s, state.base, activeLaptops()); if (c) box.appendChild(c); }
   if (!box.children.length) box.innerHTML = '<p class="muted">No comparable specs selected.</p>';
@@ -474,6 +595,7 @@ function renderLaptops(g) {
   for (const n of activeLaptops()) {
     const div = document.createElement("div");
     div.className = "laptop" + (n === base ? " isbase" : "");
+    div.id = "card-" + DATA.laptops.indexOf(n);
     const facts = DATA.facts[n].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
     div.innerHTML = `<h3>${esc(n)}${n === base ? " (base)" : ""}</h3>
       <details><summary class="muted">Specs and notes</summary><dl>${facts}</dl></details>
@@ -482,17 +604,20 @@ function renderLaptops(g) {
     div.querySelector(".radar").appendChild(radar(n, base, g));
     box.appendChild(div);
   }
+  $("#jump-laptop").innerHTML = activeLaptops().map((n) => `<option value="card-${DATA.laptops.indexOf(n)}">${esc(n)}</option>`).join("");
 }
+$("#jump-laptop").addEventListener("change", (e) => document.getElementById(e.target.value)?.scrollIntoView({ behavior: "smooth", block: "start" }));
 function renderReport() {
   renderBaseSelect();
   const g = goodness(activeLaptops());
-  renderBest(g); renderComparison(); renderValues(); renderHeat(g); renderSpecCharts(); renderLaptops(g);
+  renderHighlights(g); renderBest(g); renderComparison(); renderValues(); renderHeat(g); renderSpecCharts(); renderLaptops(g);
   updateHash();
 }
-let currentTab = "report";
+let currentTab = "home";
 function updateHash() {
   const h = new URLSearchParams({ base: state.base });
-  if (currentTab !== "report") h.set("tab", currentTab);
+  if (currentTab !== "home") h.set("tab", currentTab);
+  if (currentTab === "add" && state.editing) h.set("edit", state.editing);
   history.replaceState(null, "", "#" + h.toString());
 }
 
@@ -500,18 +625,21 @@ function updateHash() {
 function renderLaptopPicker() {
   const cols = DATA.columns.slice(0, 4);
   const filter = $("#laptop-filter").value.toLowerCase();
-  let html = `<tr><th></th><th>${esc(DATA.nameColumn)}</th>` + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "</tr>";
+  let html = `<tr><th></th><th>${esc(DATA.nameColumn)}</th>` + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "<th></th></tr>";
   for (const n of DATA.laptops) {
     const text = (n + " " + cols.map((c) => DATA.values[n][c]).join(" ")).toLowerCase();
     if (filter && !text.includes(filter)) continue;
     const on = state.laptops.has(n);
     html += `<tr class="${on ? "" : "off"}" data-name="${esc(n)}"><td><input type="checkbox" ${on ? "checked" : ""}></td><td>${esc(n)}${n === state.base ? ' <span class="tag">base</span>' : ""}</td>` +
-      cols.map((c) => `<td>${esc(DATA.values[n][c])}</td>`).join("") + "</tr>";
+      cols.map((c) => `<td>${esc(DATA.values[n][c])}</td>`).join("") +
+      `<td class="act"><button class="btn small" data-edit="${esc(n)}" title="Correct this laptop's specs">✎ Edit</button></td></tr>`;
   }
   $("#pick-laptops").innerHTML = html;
   $("#laptop-count").textContent = `${state.laptops.size} of ${DATA.laptops.length} selected`;
 }
 $("#pick-laptops").addEventListener("click", (e) => {
+  const edit = e.target.closest("[data-edit]");
+  if (edit) { startEdit(edit.dataset.edit); return; }
   const tr = e.target.closest("tr[data-name]"); if (!tr) return;
   const n = tr.dataset.name;
   if (state.laptops.has(n)) { if (state.laptops.size === 1) { toast("Keep at least one laptop selected."); renderLaptopPicker(); return; } state.laptops.delete(n); }
@@ -570,7 +698,7 @@ function renderAddForm() {
   const f = $("#add-form");
   let html = `<div class="field"><label for="f-name">${esc(DATA.nameColumn)} *</label>
     <input id="f-name" name="${esc(DATA.nameColumn)}" required placeholder="e.g. Lenovo Yoga Slim 7 14 (Ryzen AI 7 350)">
-    <span class="hint">Must be unique. Adding the model code helps.</span></div>`;
+    <span class="hint" id="name-status">A new name adds a laptop; an existing name replaces that laptop's data.</span></div>`;
   for (const c of DATA.columns) {
     const type = DATA.specTypes[c], id = "f-" + c.replace(/\W+/g, "_");
     const wide = type === "info" && /note/i.test(c);
@@ -604,7 +732,18 @@ function renderAddForm() {
     const known = DATA.rankValues[inp.dataset.ranked] || [];
     f.querySelector(`.newrank[data-for="${CSS.escape(inp.dataset.ranked)}"]`).classList.toggle("show", !!inp.value.trim() && !known.includes(inp.value.trim()));
   }));
-  f.addEventListener("reset", () => setTimeout(() => f.querySelectorAll(".newrank").forEach((d) => d.classList.remove("show")), 0));
+  f.addEventListener("reset", () => setTimeout(() => { f.querySelectorAll(".newrank").forEach((d) => d.classList.remove("show")); updateNameStatus(); }, 0));
+  f.querySelector("#f-name").addEventListener("input", updateNameStatus);
+}
+// tell the user, while typing, whether saving will ADD a new laptop or REPLACE an existing one
+function updateNameStatus() {
+  const name = $("#f-name").value.trim(), exists = DATA.laptops.includes(name);
+  const submit = $('#add-form button[type="submit"]'), st = $("#name-status");
+  if (submit) submit.textContent = exists ? "Save (replace data)" : "Add laptop";
+  st.innerHTML = !name ? "A new name adds a laptop; an existing name replaces that laptop's data."
+    : exists ? `<b style="color:var(--miss-t)">Already in the list:</b> saving replaces the data of <b>${esc(name)}</b>.`
+             : (state.editing ? `<b style="color:var(--other)">New name:</b> saving creates a new laptop (<b>${esc(state.editing)}</b> stays as it is).`
+                              : `<b style="color:var(--good)">New laptop</b>: it will be added to the list.`);
 }
 function readForm() {
   const f = $("#add-form"), values = {}, ranks = {};
@@ -625,7 +764,7 @@ $("#add-form").addEventListener("submit", async (e) => {
   const { values, ranks } = readForm();
   const box = $("#add-result");
   try {
-    const res = await api("api/laptops", { values, ranks });
+    const res = await api("api/laptops", { values, ranks });   // same name = replace, new name = add
     box.innerHTML = `<div class="alerts ok"><b>Done.</b><ul>${res.messages.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>Reloading…</div>`;
     setTimeout(() => location.reload(), 1800);
   } catch (err) {
@@ -641,14 +780,58 @@ document.addEventListener("click", (e) => {
   navigator.clipboard?.writeText(line).then(() => toast("CSV row copied to the clipboard."), () => {});
 });
 
+// ================================================================== edit mode
+function setFormMode(name) {
+  state.editing = name;
+  $("#add-title").textContent = name ? "Edit laptop" : "Add a laptop";
+  $("#add-tab-btn").textContent = name ? "Edit laptop" : "Add laptop";
+  updateNameStatus();
+  const help = $("#add-help"); if (help) help.style.display = name ? "none" : "";
+  const banner = $("#edit-banner");
+  banner.style.display = name ? "block" : "none";
+  banner.innerHTML = name ? `Editing <b>${esc(name)}</b>: every field shows its current data. Change what was wrong and save.
+    <b>Same name</b> → its data is replaced. <b>Different name</b> → a new laptop is created and this one is kept.
+    <button type="button" class="btn small" id="cancel-edit">Cancel</button>` : "";
+  $("#add-result").innerHTML = "";
+}
+function startEdit(name) {
+  const f = $("#add-form");
+  state.editing = null;   // so the reset below doesn't schedule leaving edit mode
+  f.reset();
+  f.querySelector("#f-name").value = name;
+  const src = (DATA.raw && DATA.raw[name]) || DATA.values[name] || {};    // values exactly as typed in the CSV
+  for (const c of DATA.columns) {
+    const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);
+    if (inp) { inp.value = src[c] ?? ""; inp.dispatchEvent(new Event("input")); }
+  }
+  setFormMode(name);
+  showTab("add");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.id === "cancel-edit") { $("#add-form").reset(); setFormMode(null); showTab("laptops"); }
+});
+$("#add-form").addEventListener("reset", () => { if (state.editing) setTimeout(() => setFormMode(null), 0); });
+
 // ================================================================== tabs & wiring
 function showTab(name) {
   $$(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   $$("section.tab").forEach((s) => s.classList.toggle("active", s.id === "tab-" + name));
   currentTab = name; updateHash();
+  $("#base-bar").classList.toggle("hidden", !["home", "perspec", "perlaptop"].includes(name));
+  $("#home-nav").style.display = name === "home" ? "" : "none";
+  if (name === "add" && !state.editing) setFormMode(null);
   window.scrollTo({ top: 0 });
 }
-$$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-goto]");
+  if (go) { e.preventDefault(); if (go.dataset.goto === "add") { $("#add-form").reset(); setFormMode(null); } showTab(go.dataset.goto); return; }
+  const jump = e.target.closest("[data-jump]");
+  if (jump) { e.preventDefault(); document.getElementById(jump.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+});
+$$(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.tab === "add" && state.editing && currentTab !== "add") { $("#add-form").reset(); setFormMode(null); }
+  showTab(b.dataset.tab);
+}));
 $("#base").addEventListener("change", (e) => { state.base = e.target.value; changed(); });
 function changed() { renderReport(); renderLaptopPicker(); renderSpecPicker(); }
 
@@ -656,7 +839,8 @@ const params = new URLSearchParams(location.hash.slice(1));
 const fromHash = params.get("base");
 if (fromHash && DATA.laptops.includes(fromHash)) { state.base = fromHash; state.laptops.add(fromHash); }
 renderIssues(); renderAddForm(); changed();
-if (["laptops", "specs", "add"].includes(params.get("tab"))) showTab(params.get("tab"));
+showTab(["perspec", "perlaptop", "laptops", "specs", "add"].includes(params.get("tab")) ? params.get("tab") : "home");
+if (DATA.laptops.includes(params.get("edit"))) startEdit(params.get("edit"));
 </script>
 </body>
 </html>

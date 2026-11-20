@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .data import DataFileError, apply_selection, load_dataset, load_selection, save_selection
-from .editing import AddLaptopError, add_laptop
+from .editing import AddLaptopError, save_laptop, update_laptop
 from .report import render_html
 from .validate import find_issues
 
@@ -41,7 +41,12 @@ class App:
 
     def add(self, body: dict) -> dict:
         with self.lock:
-            messages = add_laptop(self.data_dir, body.get("values", {}), body.get("ranks", {}))
+            messages = save_laptop(self.data_dir, body.get("values", {}), body.get("ranks", {}))
+        return {"ok": True, "messages": messages}
+
+    def update(self, body: dict) -> dict:
+        with self.lock:
+            messages = update_laptop(self.data_dir, body.get("original", ""), body.get("values", {}), body.get("ranks", {}))
         return {"ok": True, "messages": messages}
 
     def save_selection(self, body: dict) -> dict:
@@ -88,7 +93,7 @@ def make_handler(app: App):
                 body = json.loads(self.rfile.read(length) or b"{}")
             except json.JSONDecodeError:
                 return self._json(400, {"ok": False, "error": "Bad request."})
-            routes = {"/api/laptops": app.add, "/api/selection": app.save_selection}
+            routes = {"/api/laptops": app.add, "/api/laptops/update": app.update, "/api/selection": app.save_selection}
             handler = routes.get(self.path.split("?")[0])
             if handler is None:
                 return self._json(404, {"ok": False, "error": "Unknown action."})

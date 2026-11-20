@@ -145,6 +145,7 @@ def render_html(ds: Dataset, base: str, issues: list[Issue], selection: dict | N
         "columns": list(ds.laptops.columns),
         "specTypes": {c: (ds.specs[c].compare if c in ds.specs else "") for c in ds.laptops.columns},
         "specNotes": {c: (ds.specs[c].notes if c in ds.specs else "") for c in ds.laptops.columns},
+        "raw": {n: {c: str(ds.raw.at[n, c]) if ds.raw is not None else "" for c in ds.laptops.columns} for n in ds.names},
         "rankValues": {s: list(t.table.sort_values("rank", kind="stable").index) for s, t in ds.ranks.items()},
         "rankFiles": {s: t.path.name for s, t in ds.ranks.items()},
         "issues": [{"level": i.level, "message": i.message, "fix": i.fix} for i in issues],
