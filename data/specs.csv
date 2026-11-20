@@ -1,6 +1,6 @@
 spec,compare,rank_file,notes
 Price (€),lower,,
-CPU,ranked,cpu.csv,Score = Cinebench 2024 multi-core
+CPU,ranked,cpu.csv,Score = Cinebench R23 multi-core (Notebookcheck averages where available)
 RAM (GB),higher,,
 RAM upgradeable,ranked,ram_upgradeable.csv,
 SSD (GB),higher,,

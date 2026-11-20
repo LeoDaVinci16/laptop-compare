@@ -1,4 +1,5 @@
 value,rank,score,details
-Thunderbolt 4,1,,"40 Gbps: docks, fast drives"
-USB4,1,,"40 Gbps, equivalent"
-No,2,,Plain USB-C (10–20 Gbps)
+Thunderbolt 5,1,,"80–120 Gbps"
+Thunderbolt 4,2,,"40 Gbps: docks, fast drives"
+USB4,2,,"40 Gbps, equivalent"
+No,3,,Plain USB-C (10–20 Gbps)
