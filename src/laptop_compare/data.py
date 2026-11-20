@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -69,6 +70,7 @@ class Dataset:
     ranks: dict[str, RankTable] = field(default_factory=dict)
     data_dir: Path = Path(".")
     raw: pd.DataFrame | None = None             # laptops.csv exactly as typed (text), for error messages
+    name_column: str = "Laptop"                 # title of the first column of laptops.csv
 
     @property
     def names(self) -> list[str]:
@@ -219,4 +221,43 @@ def load_dataset(data_dir: str | Path) -> Dataset:
             if table is not None:
                 ranks[spec.name] = table
 
-    return Dataset(laptops=laptops, specs=specs, ranks=ranks, data_dir=data_dir, raw=raw)
+    return Dataset(laptops=laptops, specs=specs, ranks=ranks, data_dir=data_dir, raw=raw, name_column=name_col)
+
+
+# --------------------------------------------------------------------------- selection (which laptops / specs to use)
+
+SELECTION_FILE = "selection.json"
+
+
+def load_selection(data_dir: str | Path) -> dict:
+    """data/selection.json lists what is switched OFF, so new laptops and specs are on by default:
+    {"laptops_off": ["..."], "specs_off": ["Resolution"]}. Missing file = everything on."""
+    path = Path(data_dir) / SELECTION_FILE
+    sel = {"laptops_off": [], "specs_off": []}
+    if path.exists():
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            for key in sel:
+                sel[key] = [str(x) for x in saved.get(key, [])]
+        except (json.JSONDecodeError, AttributeError):
+            pass  # a broken file is treated as "everything on"
+    return sel
+
+
+def save_selection(data_dir: str | Path, sel: dict) -> Path:
+    path = Path(data_dir) / SELECTION_FILE
+    clean = {k: sorted(set(map(str, sel.get(k, [])))) for k in ("laptops_off", "specs_off")}
+    path.write_text(json.dumps(clean, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
+
+
+def apply_selection(ds: Dataset, sel: dict) -> Dataset:
+    """A copy of the dataset without the laptops and specs that are switched off."""
+    rows = [n for n in ds.names if n not in set(sel.get("laptops_off", []))]
+    if not rows:            # never end up with nothing to compare
+        rows = ds.names
+    cols = [c for c in ds.laptops.columns if c not in set(sel.get("specs_off", []))]
+    raw = ds.raw.loc[rows, cols] if ds.raw is not None else None
+    specs = {k: v for k, v in ds.specs.items() if k not in set(sel.get("specs_off", []))}
+    return Dataset(laptops=ds.laptops.loc[rows, cols], specs=specs, ranks=ds.ranks,
+                   data_dir=ds.data_dir, raw=raw, name_column=ds.name_column)

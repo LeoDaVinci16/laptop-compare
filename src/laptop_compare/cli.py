@@ -1,4 +1,9 @@
-"""Command line: `laptop-compare --data data --base "HP ProBook 4 G1i 14 (current)"`."""
+"""Command line.
+
+    laptop-compare                      build the CSVs, charts and reports into output/
+    laptop-compare --serve              app mode: open the report in the browser, with editing
+    laptop-compare --check              only check the data
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,7 @@ from pathlib import Path
 
 from . import __version__
 from .compare import compare
-from .data import DataFileError, load_dataset
+from .data import DataFileError, apply_selection, load_dataset, load_selection
 from .validate import ERROR, find_issues
 
 FORMATS = ("html", "qmd", "md")
@@ -18,26 +23,41 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="laptop-compare",
         description="Compare laptops spec by spec against a base laptop. "
-                    "Writes comparison CSVs, plots and a report.")
+                    "Writes comparison CSVs, charts and a report, or runs the app (--serve).")
     p.add_argument("--data", default="data", type=Path,
                    help="folder with laptops.csv, specs.csv and ranks/ (default: data)")
-    p.add_argument("--base", help="laptop to compare against (exact name; default: first row of laptops.csv)")
+    p.add_argument("--base", help="laptop to compare against (part of the name is enough; default: first one)")
     p.add_argument("--out", default="output", type=Path, help="output folder (default: output)")
     p.add_argument("--format", nargs="+", choices=FORMATS, default=["html", "qmd"],
                    help="report formats (default: html qmd)")
     p.add_argument("--csv-sep", default=",", help="separator for the output CSVs (use ';' for Excel in Spain)")
-    p.add_argument("--no-plots", action="store_true", help="skip the charts (faster)")
+    p.add_argument("--no-plots", action="store_true", help="skip the PNG charts (faster)")
+    p.add_argument("--all", action="store_true",
+                   help="ignore data/selection.json and use every laptop and spec")
     p.add_argument("--list", action="store_true", help="list the laptops and exit")
     p.add_argument("--check", action="store_true", help="only check the data for problems and exit")
     p.add_argument("--strict", action="store_true", help="stop with an error if the data has problems")
+    p.add_argument("--serve", action="store_true", help="app mode: open the report in your browser with editing")
+    p.add_argument("--port", type=int, default=8765, help="port for --serve (default: 8765)")
+    p.add_argument("--no-browser", action="store_true", help="with --serve: don't open the browser automatically")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
+
+
+def resolve_base(names: list[str], wanted: str | None) -> str | None:
+    """Exact name, or a unique part of a name (case-insensitive). None if not found / ambiguous."""
+    if not wanted:
+        return names[0]
+    if wanted in names:
+        return wanted
+    matches = [n for n in names if wanted.lower() in n.lower()]
+    return matches[0] if len(matches) == 1 else None
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        ds = load_dataset(args.data)
+        full = load_dataset(args.data)
     except FileNotFoundError as e:
         print(f"Could not find a data file: {e.filename}\n"
               f"Check that --data points to the folder with laptops.csv and specs.csv.", file=sys.stderr)
@@ -47,9 +67,23 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.list:
-        for i, name in enumerate(ds.names, 1):
-            print(f"{i:>3}. {name}")
+        sel = load_selection(args.data)
+        for i, name in enumerate(full.names, 1):
+            print(f"{i:>3}. {name}{'   (switched off)' if name in sel['laptops_off'] else ''}")
         return 0
+
+    if args.serve:
+        from .server import serve
+
+        base = resolve_base(full.names, args.base) if args.base else None
+        return serve(args.data, args.out, base=base, port=args.port, open_browser=not args.no_browser)
+
+    # which laptops/specs to use (data/selection.json, unless --all)
+    selection = {"laptops_off": [], "specs_off": []} if args.all else load_selection(args.data)
+    ds = apply_selection(full, selection)
+    off_l, off_s = len(full.names) - len(ds.names), len(full.laptops.columns) - len(ds.laptops.columns)
+    if off_l or off_s:
+        print(f"Using data/selection.json: {off_l} laptop(s) and {off_s} spec(s) switched off (--all to ignore).")
 
     issues = find_issues(ds)
     if issues:
@@ -65,14 +99,10 @@ def main(argv: list[str] | None = None) -> int:
         print("Stopping because of --strict.", file=sys.stderr)
         return 1
 
-    base = args.base or ds.names[0]
-    if base not in ds.names:
-        matches = [n for n in ds.names if base.lower() in n.lower()]
-        if len(matches) == 1:
-            base = matches[0]
-        else:
-            print(f"Base '{base}' not found. Use --list to see the names.", file=sys.stderr)
-            return 2
+    base = resolve_base(ds.names, args.base)
+    if base is None:
+        print(f"Base '{args.base}' not found among the selected laptops. Use --list to see the names.", file=sys.stderr)
+        return 2
 
     comp = compare(ds, base)
     out = args.out
@@ -86,8 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         from .plots import make_all
 
         plots = make_all(ds, comp, out)
-    if "html" in args.format:
-        written.append(write_html(ds, comp, issues, plots, out / "report.html"))
+    if "html" in args.format:      # the HTML gets every laptop, with the selection pre-applied (changeable in the page)
+        written.append(write_html(full, compare(full, base), issues, plots, out / "report.html", selection=selection))
     if "qmd" in args.format:
         written.append(write_markdown(ds, comp, issues, plots, out / "report.qmd", quarto=True))
     if "md" in args.format:

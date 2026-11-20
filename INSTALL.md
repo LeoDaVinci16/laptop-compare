@@ -35,10 +35,17 @@ laptop-compare --version
 
 You should see `laptop-compare 1.0.0`.
 
-## 4. Generate the report (every time)
+## 4. Use it (every time)
 
-**The easy way:** double-click **`run_report.bat`** in the project folder. It activates the
-environment, runs the comparison and opens `output\report.html` in your browser.
+There are two ways, both just a double-click in the project folder:
+
+| Double-click | What it does |
+|---|---|
+| **`run_app.bat`** | Opens the **app** in your browser: the report plus the tabs to **add laptops**, choose **which laptops** and **which specs** to compare, and save that choice. Keep the black window open while you use it; close it to stop. |
+| **`run_report.bat`** | Writes the files in `output\` (CSVs, charts, `report.html`, `report.qmd`) and opens `report.html`. |
+
+`report.html` also has the Laptops and Specs tabs (they work without the app); only adding
+laptops and saving the selection need the app.
 
 **From the Anaconda Prompt:**
 
@@ -51,6 +58,8 @@ laptop-compare
 Useful options:
 
 ```
+laptop-compare --serve              REM the app (same as run_app.bat)
+laptop-compare --all                REM ignore the saved selection, use every laptop and spec
 laptop-compare --base "zenbook"     REM default base for the CSVs and the Quarto report
 laptop-compare --check              REM only check the data for problems
 laptop-compare --list               REM show the laptop names
@@ -62,7 +71,10 @@ table and chart is redrawn. `--base` only sets which one is selected when the pa
 the base used in the CSVs and the Quarto report).
 
 ## 5. Edit the data
-Open the CSVs in the `data` folder with LibreOffice/Excel or any text editor:
+The easiest way is the **Add laptop** tab in the app (`run_app.bat`). If you type a CPU that
+isn't known yet, extra boxes appear to rank it, and it's added to `ranks\cpu.csv` too.
+
+You can also open the CSVs in the `data` folder with LibreOffice/Excel or any text editor:
 
 - `data\laptops.csv`: add a row per laptop
 - `data\specs.csv`: how each column is compared
@@ -99,4 +111,6 @@ Same steps in a terminal where conda is available. Use `./run_report.sh` instead
 - **`EnvironmentNameNotFound`**: step 3 wasn't done (or failed). Run it again from the project folder.
 - **`environment.yml not found`**: you're not in the project folder. Use `cd` to go there first.
 - **`run_report.bat` says it can't find Anaconda**: Anaconda is installed somewhere unusual. Use the Anaconda Prompt commands instead.
+- **The app says it can't write the file**: `laptops.csv` is probably open in Excel, which locks it. Close it and try again.
+- **The browser doesn't open with `run_app.bat`**: open <http://127.0.0.1:8765/> yourself (the window shows the exact address).
 - **A ⚠ message about the data**: it says exactly which file and row to add (e.g. a CPU missing from `ranks\cpu.csv`).

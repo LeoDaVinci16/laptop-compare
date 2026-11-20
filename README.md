@@ -30,6 +30,29 @@ laptop-compare --csv-sep ";"                     # CSVs that Excel/LibreOffice i
 laptop-compare --data other_folder --out results
 ```
 
+### App mode (add laptops, choose laptops and specs)
+
+```
+laptop-compare --serve          # or double-click run_app.bat
+```
+
+Opens the report in your browser from a small local web server (Python's built-in one,
+listening only on this computer). The page has four tabs:
+
+| Tab | What it does |
+|---|---|
+| **Report** | everything below (comparison, charts, laptop cards) for the selected laptops and specs |
+| **Laptops** | tick/untick laptops to keep charts readable or narrow down to finalists (filter box, all/none/invert) |
+| **Specs** | tick/untick the specs that matter to you (e.g. drop Resolution); scores and "best" update too |
+| **Add laptop** | a form with one box per spec; new CPUs/ranked values can be ranked right there |
+
+**Save as default** writes the ticks to `data/selection.json` (it lists what is switched *off*,
+so new laptops and specs appear switched on). The CSVs and the Quarto report also use it;
+`--all` ignores it. Rows are appended to the CSVs, keeping their separator and encoding.
+
+The static `output/report.html` has the same tabs: ticking works there too, but adding
+laptops and saving need app mode.
+
 ### Changing the base laptop
 - **In the HTML report:** use the **Base laptop** dropdown at the top. The comparison table,
   every chart and every laptop card are redrawn instantly; no Python needed. The choice is
@@ -121,6 +144,8 @@ src/laptop_compare/
   plots.py       charts (matplotlib)
   report.py      CSVs, interactive HTML report (template + charts in templates/report.html.j2),
                  Quarto/Markdown report
+  editing.py     add a laptop / new rank values to the CSVs
+  server.py      app mode (local web server, standard library only)
   cli.py         command line
 tests/           pytest tests for the rules and the alerts
 ```

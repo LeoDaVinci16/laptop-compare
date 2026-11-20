@@ -88,16 +88,6 @@ def _num(v):
     return None if v is None or (isinstance(v, float) and math.isnan(v)) else round(float(v), 4)
 
 
-def _heat_color(v: float) -> str:
-    """0–100 -> red/yellow/green background (same colours as the PNG heatmap)."""
-    if v is None or (isinstance(v, float) and math.isnan(v)):
-        return "#EEEEEE"
-    import matplotlib
-
-    r, g, b, _ = matplotlib.colormaps["RdYlGn"](v / 100 * 0.8 + 0.1)   # avoid the darkest ends
-    return "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
-
-
 def report_data(ds: Dataset, base: str) -> dict:
     """Everything the interactive HTML needs, with the comparison precomputed for EVERY possible base,
     so the report can switch base in the browser without Python."""
@@ -141,38 +131,35 @@ def report_data(ds: Dataset, base: str) -> dict:
     }
 
 
-def write_html(ds: Dataset, comp: Comparison, issues: list[Issue], plots: dict | None, path: Path) -> Path:
-    """Interactive single-file report: pick the base laptop in the page and everything is redrawn.
-    The charts are drawn by the browser (no PNGs, no internet needed)."""
+def render_html(ds: Dataset, base: str, issues: list[Issue], selection: dict | None = None,
+                server_mode: bool = False) -> str:
+    """The interactive report as a string. `ds` is the FULL dataset: the Laptops/Specs tabs switch
+    laptops and specs on/off in the browser, starting from `selection` (data/selection.json)."""
     env = Environment(loader=PackageLoader("laptop_compare", "templates"), autoescape=select_autoescape())
     tpl = env.get_template("report.html.j2")
-
-    value_specs = _value_columns(ds)
-    value_rows = []
-    for n in comp.laptops:
-        cells = []
-        for s in value_specs:
-            text = _value_text(ds.laptops.at[n, s])
-            is_text = not re.fullmatch(r"[\d.,]*", text)
-            cls = "missing" if comp.cells[(n, s)].status == MISSING else ("text" if is_text and s in ds.specs
-                                                                           and ds.specs[s].compare == INFO else "")
-            cells.append({"text": text, "cls": cls})
-        value_rows.append({"name": n, "cells": cells})
-
-    g = goodness(ds)
-    heat = {"specs": list(g.columns),
-            "rows": [{"name": n, "cells": [{"text": "" if math.isnan(g.at[n, s]) else f"{g.at[n, s]:.0f}",
-                                            "bg": _heat_color(g.at[n, s])} for s in g.columns]} for n in ds.names]}
-
-    data = report_data(ds, comp.base)
-    html = tpl.render(
-        base=comp.base, laptops=ds.names, n_laptops=len(ds.names), n_specs=len(ds.laptops.columns),
-        generated=datetime.now().strftime("%Y-%m-%d %H:%M"), data_dir=str(ds.data_dir),
-        issues=issues, best=best_per_spec(ds).to_dict("records"),
-        value_specs=value_specs, value_rows=value_rows, heat=heat,
+    data = report_data(ds, base)
+    data.update({
+        "serverMode": server_mode,
+        "selection": selection or {"laptops_off": [], "specs_off": []},
+        "nameColumn": ds.name_column,
+        "columns": list(ds.laptops.columns),
+        "specTypes": {c: (ds.specs[c].compare if c in ds.specs else "") for c in ds.laptops.columns},
+        "specNotes": {c: (ds.specs[c].notes if c in ds.specs else "") for c in ds.laptops.columns},
+        "rankValues": {s: list(t.table.sort_values("rank", kind="stable").index) for s, t in ds.ranks.items()},
+        "rankFiles": {s: t.path.name for s, t in ds.ranks.items()},
+        "issues": [{"level": i.level, "message": i.message, "fix": i.fix} for i in issues],
+    })
+    return tpl.render(
+        base=base, generated=datetime.now().strftime("%Y-%m-%d %H:%M"), data_dir=str(ds.data_dir),
+        server_mode=server_mode,
         data_json=json.dumps(data, ensure_ascii=False).replace("</", "<\\/"),
     )
-    path.write_text(html, encoding="utf-8")
+
+
+def write_html(ds: Dataset, comp: Comparison, issues: list[Issue], plots: dict | None, path: Path,
+               selection: dict | None = None) -> Path:
+    """Write the interactive single-file report (works offline, no server needed to view it)."""
+    path.write_text(render_html(ds, comp.base, issues, selection), encoding="utf-8")
     return path
 
 

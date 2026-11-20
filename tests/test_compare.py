@@ -134,3 +134,46 @@ def test_values_in_an_untitled_column_give_a_clear_error(tmp_path):
     p.write_text("Laptop,Price\nA,1,oops\n", encoding="utf-8")
     with pytest.raises(DataFileError, match="more values than there are column titles"):
         read_csv(p)
+
+
+# ---------------------------------------------------------------- selection and adding laptops
+
+def test_selection_switches_laptops_and_specs_off(tmp_data):
+    from laptop_compare.data import apply_selection, load_selection, save_selection
+
+    save_selection(tmp_data, {"laptops_off": ["Mac?", "LG gram 14 (14Z90T)"], "specs_off": ["Resolution"]})
+    ds = load_dataset(tmp_data)
+    sub = apply_selection(ds, load_selection(tmp_data))
+    assert "LG gram 14 (14Z90T)" not in sub.names and "Resolution" not in sub.laptops.columns
+    assert find_issues(sub) == []          # a switched-off spec must not raise "not a column" warnings
+
+
+def test_add_laptop_with_a_new_cpu(tmp_data):
+    from laptop_compare.editing import add_laptop
+
+    msgs = add_laptop(tmp_data, {"Laptop": "Test 14", "Price (€)": "1.399,50", "CPU": "Intel Core Ultra X7 358H",
+                                 "Weight (kg)": "1,3", "Notes": "has, a comma"},
+                      {"CPU": {"rank": "1", "score": "1100", "details": "estimate"}})
+    assert any("Added 'Test 14'" in m for m in msgs)
+    ds = load_dataset(tmp_data)
+    assert ds.laptops.at["Test 14", "Price (€)"] == 1399.5 and ds.laptops.at["Test 14", "Notes"] == "has, a comma"
+    assert ds.ranks["CPU"].score("Intel Core Ultra X7 358H") == 1100
+    assert find_issues(ds) == []
+
+
+def test_add_laptop_refuses_duplicates_and_bad_numbers(tmp_data):
+    from laptop_compare.editing import AddLaptopError, add_laptop
+
+    with pytest.raises(AddLaptopError, match="already"):
+        add_laptop(tmp_data, {"Laptop": BASE})
+    with pytest.raises(AddLaptopError, match="not a number"):
+        add_laptop(tmp_data, {"Laptop": "X", "Price (€)": "cheap"})
+    with pytest.raises(AddLaptopError, match="needs a name"):
+        add_laptop(tmp_data, {"Price (€)": "1000"})
+
+
+def test_unranked_value_without_rank_is_reported_after_adding(tmp_data):
+    from laptop_compare.editing import add_laptop
+
+    msgs = add_laptop(tmp_data, {"Laptop": "Y", "CPU": "Apple M4"})
+    assert any("Still to do" in m and "Apple M4" in m for m in msgs)
