@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,8 @@ name = "laptop-compare"
 version = "1.0.0"
 description = "Compare laptops spec by spec against a base laptop: comparison CSV, charts and an HTML/Quarto report."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = ["pandas>=2.0", "matplotlib>=3.7", "jinja2>=3.1"]
 

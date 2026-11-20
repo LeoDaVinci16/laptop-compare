@@ -1,0 +1,5 @@
+value,rank,score,details
+Windows 11 Pro,1,,"WSL, Hyper-V, BitLocker"
+Windows 11 Home,2,,WSL works
+macOS,3,,No WSL (MATLAB and Python run natively)
+None,4,,No OS / FreeDOS: add ~€100-150 for a Windows licence

@@ -216,3 +216,44 @@ def test_save_by_name_replaces_or_adds(tmp_data):
     assert len(after.names) == len(before.names) and after.laptops.at[msi, "Price (€)"] == 1199
     assert "Added" in save_laptop(tmp_data, values | {"Laptop": "MSI copy"})[0]   # new name -> added
     assert len(load_dataset(tmp_data).names) == len(before.names) + 1
+
+
+def _add_ppi_spec(data_dir: Path, formula: str = "ppi(Resolution, Screen (in))") -> None:
+    path = data_dir / "specs.csv"
+    lines = path.read_text(encoding="utf-8").rstrip("\n").split("\n")
+    if "formula" not in lines[0]:
+        lines[0] += ",formula"
+    lines.append(f'Pixel density (ppi),higher,,,"{formula}"')
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_calculated_spec_is_added_after_its_inputs(tmp_data):
+    _add_ppi_spec(tmp_data)
+    ds = load_dataset(tmp_data)
+    cols = list(ds.laptops.columns)
+    assert cols.index("Pixel density (ppi)") == max(cols.index("Resolution"), cols.index("Screen (in)")) + 1
+    assert "Pixel density (ppi)" not in ds.file_columns
+    name = ds.names[0]
+    if ds.raw.at[name, "Resolution"] == "1920×1200" and ds.raw.at[name, "Screen (in)"] == "14":
+        assert ds.laptops.at[name, "Pixel density (ppi)"] == 162
+    assert not [i for i in find_issues(ds) if "ppi" in i.message]
+
+
+def test_calculated_spec_is_never_written_to_the_csv(tmp_data):
+    from laptop_compare.editing import save_laptop
+
+    _add_ppi_spec(tmp_data)
+    ds = load_dataset(tmp_data)
+    name = ds.names[0]
+    values = {ds.name_column: name, **{c: ds.raw.at[name, c] for c in ds.file_columns}}
+    values["Pixel density (ppi)"] = "999"
+    header_before = (tmp_data / "laptops.csv").read_text(encoding="utf-8").splitlines()[0]
+    save_laptop(tmp_data, values)
+    assert (tmp_data / "laptops.csv").read_text(encoding="utf-8").splitlines()[0] == header_before
+    assert load_dataset(tmp_data).laptops.at[name, "Pixel density (ppi)"] != 999
+
+
+def test_bad_formula_is_reported(tmp_data):
+    _add_ppi_spec(tmp_data, "ppi(Resolution, Nope)")
+    msgs = [i.message for i in find_issues(load_dataset(tmp_data))]
+    assert any("'Nope'" in m for m in msgs)

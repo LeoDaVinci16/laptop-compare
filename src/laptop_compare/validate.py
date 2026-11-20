@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from .data import COMPARE_TYPES, RANKED, Dataset, slugify
+from .data import COMPARE_TYPES, RANKED, Dataset, FormulaError, parse_formula, slugify
 
 ERROR = "error"      # the comparison for that cell/spec can't be made
 WARNING = "warning"  # the comparison works, but something looks wrong
@@ -41,6 +41,21 @@ def find_issues(ds: Dataset) -> list[Issue]:
                                 f"Add a row to specs.csv: {col},higher|lower|ranked|info"))
 
     for spec in ds.specs.values():
+        if spec.derived:
+            try:
+                _, args = parse_formula(spec.formula)
+            except FormulaError as e:
+                issues.append(Issue(ERROR, f"Spec '{spec.name}': formula {e}",
+                                    "Write it like ppi(Resolution, Screen (in)) in the formula column of specs.csv."))
+                continue
+            if spec.name in ds.file_columns:
+                issues.append(Issue(WARNING, f"Spec '{spec.name}' has a formula but is also a column of laptops.csv.",
+                                    "Remove the column from laptops.csv (it is calculated) or clear the formula."))
+            for a in args:
+                if a not in ds.laptops.columns:
+                    issues.append(Issue(ERROR, f"Spec '{spec.name}' is calculated from '{a}', which is not a column.",
+                                        "Check the column names inside the formula in specs.csv."))
+            continue
         if spec.name not in ds.laptops.columns:
             issues.append(Issue(WARNING, f"Spec '{spec.name}' is in specs.csv but not a column of laptops.csv.",
                                 "Check the spelling (it must match the column title exactly) or remove the row."))

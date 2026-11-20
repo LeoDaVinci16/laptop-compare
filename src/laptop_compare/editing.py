@@ -67,7 +67,7 @@ def _build_row(ds, values: dict[str, str], original: str | None = None) -> list[
     if name in ds.names and name != original:
         raise AddLaptopError(f"There is already a laptop called '{name}'. Use a different name (add the model code).")
     row, errors = [name], []
-    for col in ds.laptops.columns:
+    for col in ds.file_columns or ds.laptops.columns:      # calculated specs (formula) are never written
         v = values.get(col, "")
         spec = ds.specs.get(col)
         if spec is not None and spec.is_numeric:

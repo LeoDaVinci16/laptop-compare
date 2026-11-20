@@ -76,6 +76,8 @@
   .spec-groups { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
   .spec-groups .card label { display:flex; gap: 8px; align-items: center; padding: 4px 0; cursor:pointer; font-size: 13.5px; }
   .spec-groups .card label.off { color:#9aa1ab; }
+  .site-footer { max-width: 1400px; margin: 40px auto 0; padding: 18px 32px 30px; border-top: 1px solid #e2e8f0; color:#64748b; font-size: 12.5px; }
+  .site-footer p { margin: 4px 0; }
   .tag { display:inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background:#eef2f7; color:#475569; }
   /* add form */
   form.add { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px 20px; background:#fff;
@@ -261,6 +263,15 @@
   <form class="add" id="add-form" autocomplete="off"></form>
   <div id="add-result"></div>
 </main></section>
+
+<footer class="site-footer">
+  <p><b>Built entirely by Claude</b> (an AI by Anthropic). The idea, requirements and feedback came from the project owner,
+  who did not write the code. Laptop prices and specs were collected from shop listings and benchmark sites and may be out of date or wrong:
+  check them before buying.</p>
+  <p>Want to use it with your own laptops? Download the project and edit the CSV files offline.
+  Ideas for a JavaScript-only version or hosting it on a server: contact <a href="mailto:arnaucnadal@disroot.org">arnaucnadal@disroot.org</a>.</p>
+  <p>Code under the MIT License. Data provided as is, with no guarantee that it is correct or up to date.</p>
+</footer>
 
 <div id="toast"></div>
 
@@ -665,7 +676,8 @@ function renderSpecPicker() {
     if (!groups[type]) continue;
     html += `<div class="card"><h4>${TYPE_LABEL[type]}</h4>` + groups[type].map((c) => {
       const on = state.specs.has(c);
-      const note = DATA.specNotes[c] ? ` <span class="muted">· ${esc(DATA.specNotes[c])}</span>` : "";
+      const calc = DATA.derived && DATA.derived[c] ? ` <span class="tag">calculated</span>` : "";
+      const note = calc + (DATA.specNotes[c] ? ` <span class="muted">· ${esc(DATA.specNotes[c])}</span>` : "");
       return `<label class="${on ? "" : "off"}"><input type="checkbox" data-spec="${esc(c)}" ${on ? "checked" : ""}> ${esc(c)}${note}</label>`;
     }).join("") + "</div>";
   }
@@ -694,6 +706,7 @@ $$(".save-note").forEach((p) => (p.textContent = SERVER ? "Changes apply instant
                                                        : "Changes apply instantly to this page. To remember them, open the report with run_app.bat and use 'Save as default'."));
 
 // ================================================================== add-laptop tab
+const fileColumns = () => DATA.columns.filter((c) => !(DATA.derived && DATA.derived[c]));   // calculated specs aren't typed
 function renderAddForm() {
   const f = $("#add-form");
   let html = `<div class="field"><label for="f-name">${esc(DATA.nameColumn)} *</label>
@@ -703,7 +716,10 @@ function renderAddForm() {
     const type = DATA.specTypes[c], id = "f-" + c.replace(/\W+/g, "_");
     const wide = type === "info" && /note/i.test(c);
     html += `<div class="field${wide ? " wide" : ""}"><label for="${id}">${esc(c)} <span class="tag">${esc(type || "no type")}</span></label>`;
-    if (type === "ranked") {
+    if (DATA.derived && DATA.derived[c]) {
+      html += `<input id="${id}" data-derived="${esc(c)}" disabled placeholder="calculated automatically">
+        <span class="hint">Calculated from ${esc(DATA.derived[c])} when you save.</span>`;
+    } else if (type === "ranked") {
       const known = DATA.rankValues[c] || [];
       html += `<input id="${id}" name="${esc(c)}" list="dl-${id}" data-ranked="${esc(c)}" placeholder="pick or type a new one">
         <datalist id="dl-${id}">${known.map((v) => `<option value="${esc(v)}">`).join("")}</datalist>
@@ -748,7 +764,7 @@ function updateNameStatus() {
 function readForm() {
   const f = $("#add-form"), values = {}, ranks = {};
   values[DATA.nameColumn] = f.querySelector("#f-name").value.trim();
-  for (const c of DATA.columns) {
+  for (const c of fileColumns()) {
     const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);
     values[c] = inp ? inp.value.trim() : "";
     const nr = f.querySelector(`.newrank[data-for="${CSS.escape(c)}"]`);
@@ -774,7 +790,7 @@ $("#add-form").addEventListener("submit", async (e) => {
 document.addEventListener("click", (e) => {
   if (e.target.id !== "copy-row") return;
   const { values } = readForm();
-  const cells = [values[DATA.nameColumn], ...DATA.columns.map((c) => values[c])].map((v) => /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const cells = [values[DATA.nameColumn], ...fileColumns().map((c) => values[c])].map((v) => /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const line = cells.join(",");
   $("#add-result").innerHTML = `<p class="muted">Paste this line at the end of <code>data/laptops.csv</code>:</p><pre class="row">${esc(line)}</pre>`;
   navigator.clipboard?.writeText(line).then(() => toast("CSV row copied to the clipboard."), () => {});
@@ -803,6 +819,8 @@ function startEdit(name) {
   for (const c of DATA.columns) {
     const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);
     if (inp) { inp.value = src[c] ?? ""; inp.dispatchEvent(new Event("input")); }
+    const d = f.querySelector(`[data-derived="${CSS.escape(c)}"]`);
+    if (d) d.value = src[c] ?? "";
   }
   setFormMode(name);
   showTab("add");

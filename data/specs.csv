@@ -1,4 +1,4 @@
-spec,compare,rank_file,notes
+spec,compare,rank_file,notes,formula
 Price (€),lower,,
 CPU,ranked,cpu.csv,Score = Cinebench R23 multi-core (Notebookcheck averages where available)
 RAM (GB),higher,,
@@ -17,3 +17,9 @@ USB-A ports,higher,,
 Thunderbolt or USB4,ranked,thunderbolt_or_usb4.csv,
 Price seen at,info,,
 Notes,info,,
+GPU,ranked,gpu.csv,Integrated graphics (comes with the CPU),
+Max RAM (GB),higher,,Most RAM the laptop can take (= RAM if soldered),
+Pixel density (ppi),higher,,Sharpness: calculated from resolution and screen size,"ppi(Resolution, Screen (in))"
+HDMI,ranked,hdmi.csv,Plug into projectors/monitors without a dongle,
+OS,ranked,os.csv,No OS = you need to buy a Windows licence for WSL,
+Keyboard layout,ranked,keyboard_layout.csv,ES = Spanish (with Ñ),

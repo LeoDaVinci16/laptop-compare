@@ -8,6 +8,24 @@ It works like the spreadsheet, but from CSV files:
 - `output/report.qmd`: the same report for Quarto (`quarto render report.qmd --to pdf`)
 - `output/plots/*.png`: the same charts as images (used by the Quarto report)
 
+> **Built moslty by Claude** (an AI model by Anthropic). I had the idea, wrote the requirements and
+> tested the result, but I did not write most of the code. The laptop data (prices, specs, benchmark scores)
+> was also collected by Claude from shop listings and benchmark sites in November 2026: it can be out of
+> date or wrong, so check it before buying anything.
+
+## Use it with your own laptops
+Download the project (green **Code** button → *Download ZIP*, or `git clone`), install it (below) and edit
+`data/laptops.csv` and the rank files offline, or use the app's **Add laptop** / **✎ Edit** forms.
+
+## Contributing / contact
+Want to turn it into a JavaScript-only website, host the app on a server, or improve it some other way?
+Get in touch at **arnaucnadal@disroot.org**. I'm happy to give permission.
+
+## License
+[MIT](LICENSE): free to use, copy, change and share, as long as the license text stays with it.
+The laptop data in `data/` (prices, specs, benchmark scores) is provided as is, with no guarantee
+that it is correct or up to date.
+
 ## Install (Anaconda)
 
 Full beginner steps are in **[INSTALL.md](INSTALL.md)**. In short, from the Anaconda Prompt inside this folder:
@@ -73,18 +91,23 @@ The first column is the laptop name, and every other column is a spec. **To add 
 To add a spec, add a column, then describe it in `specs.csv`.
 
 ### `specs.csv`: how each column is compared
-| spec | compare | rank_file | notes |
-|---|---|---|---|
-| Price (€) | lower | | |
-| CPU | ranked | cpu.csv | Score = Cinebench 2024 multi-core |
-| RAM (GB) | higher | | |
-| Notes | info | | |
+| spec | compare | rank_file | notes | formula |
+|---|---|---|---|---|
+| Price (€) | lower | | | |
+| CPU | ranked | cpu.csv | Score = Cinebench R23 multi-core | |
+| RAM (GB) | higher | | | |
+| Pixel density (ppi) | higher | | Sharpness | ppi(Resolution, Screen (in)) |
+| Notes | info | | | |
 
 `compare` is one of:
 - `higher`: a bigger number is better (RAM, battery, ports)
 - `lower`: a smaller number is better (price, weight)
 - `ranked`: text values sorted in a rank file (CPU, panel, Thunderbolt…)
 - `info`: shown but not compared (notes, shop, screen size)
+
+`formula` (optional) makes a **calculated spec**: it is not a column of `laptops.csv`, it's worked out
+from other columns and shown right after them. The app's form shows it greyed out. Available formulas:
+- `ppi(<resolution column>, <screen size column>)`: pixels per inch, e.g. 1920×1200 on 14" → 162
 
 ### `ranks/<file>.csv`: one file per ranked spec
 ```csv

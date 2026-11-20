@@ -12,7 +12,7 @@ import pandas as pd
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from .compare import EMPTY, MISSING, Comparison, best_per_spec, goodness
-from .data import INFO, Dataset
+from .data import INFO, Dataset, parse_formula
 from .validate import Issue
 
 # --------------------------------------------------------------------------- CSV
@@ -145,6 +145,8 @@ def render_html(ds: Dataset, base: str, issues: list[Issue], selection: dict | N
         "columns": list(ds.laptops.columns),
         "specTypes": {c: (ds.specs[c].compare if c in ds.specs else "") for c in ds.laptops.columns},
         "specNotes": {c: (ds.specs[c].notes if c in ds.specs else "") for c in ds.laptops.columns},
+        "derived": {c: ", ".join(parse_formula(ds.specs[c].formula)[1]) for c in ds.laptops.columns
+                    if c in ds.specs and ds.specs[c].derived and c not in ds.file_columns},
         "raw": {n: {c: str(ds.raw.at[n, c]) if ds.raw is not None else "" for c in ds.laptops.columns} for n in ds.names},
         "rankValues": {s: list(t.table.sort_values("rank", kind="stable").index) for s, t in ds.ranks.items()},
         "rankFiles": {s: t.path.name for s, t in ds.ranks.items()},
