@@ -8,7 +8,7 @@ It works like the spreadsheet, but from CSV files:
 - `output/report.qmd`: the same report for Quarto (`quarto render report.qmd --to pdf`)
 - `output/plots/*.png`: the same charts as images (used by the Quarto report)
 
-**Live report:** https://leodavinci16.github.io/laptop-compare/ (read-only; to add or edit laptops, run the app locally).
+**Live report:** https://leodavinci16.github.io/laptop-compare/ — explore the current data online (read-only). To add or edit laptops, download the project and run it locally.
 
 > **Built mostly by Claude** (an AI model by Anthropic). I had the idea, wrote the requirements and
 > tested the result; Claude wrote most of the code. The laptop data (prices, specs, benchmark scores)
@@ -27,6 +27,11 @@ Get in touch at **arnaucnadal@disroot.org**. I'm happy to give permission.
 [MIT](LICENSE): free to use, copy, change and share, as long as the license text stays with it.
 The laptop data in `data/` (prices, specs, benchmark scores) is provided as is, with no guarantee
 that it is correct or up to date.
+
+## Website (GitHub Pages)
+The online version is just a copy of the report in `docs/index.html`, served by GitHub Pages
+(*Settings → Pages → Deploy from a branch → main / docs*). To update it after changing the data:
+double-click `run_publish.bat` (or `./run_publish.sh`), then commit and push the `docs` folder.
 
 ## Install (Anaconda)
 
