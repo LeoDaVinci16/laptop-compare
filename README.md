@@ -8,6 +8,8 @@ It works like the spreadsheet, but from CSV files:
 - `output/report.qmd`: the same report for Quarto (`quarto render report.qmd --to pdf`)
 - `output/plots/*.png`: the same charts as images (used by the Quarto report)
 
+**Live report:** https://leodavinci16.github.io/laptop-compare/ (read-only; to add or edit laptops, run the app locally).
+
 > **Built mostly by Claude** (an AI model by Anthropic). I had the idea, wrote the requirements and
 > tested the result; Claude wrote most of the code. The laptop data (prices, specs, benchmark scores)
 > was also collected by Claude from shop listings and benchmark sites in November 2026: it can be out of
