@@ -1,6 +1,6 @@
 spec,compare,rank_file,notes,formula
 Price (€),lower,,
-CPU,ranked,cpu.csv,Score = Cinebench R23 multi-core (Notebookcheck averages where available)
+CPU,ranked,cpu.csv,Score = Cinebench R23 multi-core (Notebookcheck benchmark list · Nov 2026)
 RAM (GB),higher,,
 RAM upgradeable,ranked,ram_upgradeable.csv,
 SSD (GB),higher,,
@@ -17,7 +17,7 @@ USB-A ports,higher,,
 Thunderbolt or USB4,ranked,thunderbolt_or_usb4.csv,
 Price seen at,info,,
 Notes,info,,
-GPU,ranked,gpu.csv,Integrated graphics · score = 3DMark Time Spy Graphics (Notebookcheck avg); Apple has no score (ranked only),
+GPU,ranked,gpu.csv,Integrated or dedicated graphics · score = 3DMark Time Spy Graphics (Notebookcheck benchmark list · Nov 2026); Apple GPUs can't run Time Spy so they are ranked only (placed with cross-platform 3DMark tests),
 Max RAM (GB),higher,,Most RAM the laptop can take (= RAM if soldered),
 Pixel density (ppi),higher,,Sharpness: calculated from resolution and screen size,"ppi(Resolution, Screen (in))"
 HDMI,ranked,hdmi.csv,Plug into projectors/monitors without a dongle,
